@@ -308,16 +308,37 @@ namespace BlackHoleEffect.Editor
             transformer.allowTwoHandedScaling = true;
 
             // --- Feed the beast: throwable star-balls on a floating shelf --------
+            // Real little stars (StarSurface: limb darkening + convection
+            // granulation), one per spectral type. Corona pass is disabled in
+            // MR: its additive blend saturates the alpha channel the
+            // passthrough compositor reads, which would punch black halos
+            // into the room view.
             var flare = hole.AddComponent<MatterFlare>();
-            var starBallMat = SaveMaterial("ThrowableStar", Shader.Find("Universal Render Pipeline/Unlit"));
-            starBallMat.SetColor("_BaseColor", new Color(2.4f, 1.7f, 0.7f, 1f));
+            var starShader = Shader.Find("BlackHole/StarSurface");
+            var starBallMats = new Material[3];
+            var starColors = new[]
+            {
+                new Color(2.6f, 2.2f, 1.4f),  // G-type: sun-like yellow-white
+                new Color(2.6f, 1.4f, 0.55f), // K-type: orange
+                new Color(2.2f, 0.75f, 0.35f) // M-type: red dwarf
+            };
+            for (int i = 0; i < 3; i++)
+            {
+                starBallMats[i] = SaveMaterial("ThrowableStar" + (char)('A' + i), starShader);
+                starBallMats[i].SetColor("_StarColor", starColors[i]);
+                starBallMats[i].SetFloat("_Granulation", 0.5f);
+                starBallMats[i].SetFloat("_GranScale", 9f - i * 1.5f); // cooler = chunkier cells
+                starBallMats[i].SetFloat("_SpotStrength", 0.2f + 0.12f * i);
+                starBallMats[i].SetFloat("_RimBoost", 0.4f);
+                starBallMats[i].SetFloat("_CoronaBoost", 0f);
+            }
             for (int i = 0; i < 3; i++)
             {
                 var ball = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                 ball.name = "Star Ball " + (i + 1);
                 ball.transform.position = new Vector3(-0.24f + 0.24f * i, 1.0f, 0.85f);
                 ball.transform.localScale = Vector3.one * 0.06f;
-                ball.GetComponent<MeshRenderer>().sharedMaterial = starBallMat;
+                ball.GetComponent<MeshRenderer>().sharedMaterial = starBallMats[i];
                 var ballRb = ball.AddComponent<Rigidbody>();
                 ballRb.useGravity = false;
                 ballRb.linearDamping = 0f;

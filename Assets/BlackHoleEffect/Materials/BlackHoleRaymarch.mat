@@ -26,6 +26,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _BinaryOn: 0
     - _DemoStarBrightness: 1.8
     - _DemoStarOn: 0
     - _DemoStarSize: 0.0045
@@ -38,14 +39,19 @@ Material:
     - _Doppler: 0.72
     - _FlowSpeed: 0.9
     - _HazeStrength: 0.18
+    - _Hole1Mass: 1
+    - _Hole2Mass: 0.8
     - _MRMode: 0
     - _NebulaIntensity: 0.15
+    - _Spin: 0
     - _StarDensity: 0.12
     - _Steps: 220
     - _ViewExtent: 15
     - _ZWrite: 1
     m_Colors:
-    - _DemoStarDir: {r: 0.27859238, g: -0.92522115, b: -0.25758883, a: 0}
+    - _DemoStarDir: {r: 0.3082009, g: -0.13844791, b: 0.9411931, a: 0}
     - _DiskTint: {r: 1, g: 1, b: 1, a: 1}
+    - _Hole1Pos: {r: 0.25056687, g: -0, b: -3.119115, a: 0}
+    - _Hole2Pos: {r: -0.31320858, g: 0, b: 3.8988938, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
