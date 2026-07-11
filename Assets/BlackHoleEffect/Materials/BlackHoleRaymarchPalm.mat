@@ -1,0 +1,52 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BlackHoleRaymarchPalm
+  m_Shader: {fileID: 4800000, guid: 5f74de9ebc54a18428badf50ed6e04d1, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords:
+  - _MRMODE_ON
+  - _ZWRITE_ON
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: 2901
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs: []
+    m_Ints: []
+    m_Floats:
+    - _DemoStarBrightness: 6
+    - _DemoStarOn: 0
+    - _DemoStarSize: 0.0007
+    - _DiskBrightness: 9.5
+    - _DiskContrast: 0.3
+    - _DiskDetail: 4.2
+    - _DiskInner: 2.9
+    - _DiskOuter: 8.6
+    - _DiskTemp: 1.06
+    - _Doppler: 0.72
+    - _FlowSpeed: 0.9
+    - _HazeStrength: 0.18
+    - _MRMode: 1
+    - _NebulaIntensity: 0.15
+    - _StarDensity: 0.12
+    - _Steps: 64
+    - _ViewExtent: 12
+    - _ZWrite: 0
+    m_Colors:
+    - _DemoStarDir: {r: 0, g: 0, b: 1, a: 0}
+    - _DiskTint: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
