@@ -21,8 +21,12 @@ namespace BlackHoleEffect
 
         [Tooltip("Companion mass in units of the primary (GW150914 ≈ 29/36).")]
         public float massRatio = 0.8f;
-        [Tooltip("Initial separation in sim units (Rs of the primary = 2).")]
+        [Tooltip("Primary mass in M units. Scaled below 1 so the pair starts wide: with 0.6/0.48 the initial separation is ~14x the total mass — the stage right after a GW150914-like signal enters the LIGO band — instead of the last couple of orbits.")]
+        public float primaryMass = 0.6f;
+        [Tooltip("Initial separation in sim units (GM/c² of a unit mass = 1).")]
         public float startSeparation = 15f;
+        [Tooltip("Global time-lapse on the orbital motion: the real final 0.2 s of inspiral is stretched to ~25 s. Kepler scaling ω ∝ a^(-3/2) is preserved.")]
+        public float timeLapse = 21f;
 
         public bool Running { get; private set; }
 
@@ -86,15 +90,17 @@ namespace BlackHoleEffect
             Vector3 savedScale = controller.transform.localScale;
 
             controller.spin = 0f;                      // superposition path is Schwarzschild
-            mTotal = 1f + massRatio;
+            mTotal = primaryMass * (1f + massRatio);
             separation = startSeparation;
             theta = 0f;
 
             // The binary carves a cavity in the disk: push the inner edge out.
-            controller.diskInnerRadius = Mathf.Min(6f, startSeparation * 0.62f);
+            // (Stylized — a real circumbinary cavity sits at ~2a, beyond the
+            // visible disk; the holes stay safely inside this one.)
+            controller.diskInnerRadius = 6f;
             controller.Apply();
-            mat.SetFloat(Hole1MassId, 1f);
-            mat.SetFloat(Hole2MassId, massRatio);
+            mat.SetFloat(Hole1MassId, primaryMass);
+            mat.SetFloat(Hole2MassId, primaryMass * massRatio);
             mat.SetFloat(BinaryOnId, 1f);
 
             EnsureChirp();
@@ -239,14 +245,17 @@ namespace BlackHoleEffect
 
         void StepOrbit(float dt)
         {
-            // Kepler in sim units: ω² = M_total / a³. Slowed a little so the
-            // final orbits stay readable on screen.
-            float omega = Mathf.Sqrt(mTotal / Mathf.Max(separation * separation * separation, 1f)) * 2.2f;
+            // Kepler in sim units: ω² = M_total / a³, played back at a global
+            // time-lapse so months of inspiral fit into the cinematic.
+            float omega = Mathf.Sqrt(mTotal / Mathf.Max(separation * separation * separation, 1f)) * timeLapse;
             theta += omega * dt;
 
+            // Each hole orbits the barycenter at a distance ∝ the OTHER mass.
+            float f1 = massRatio / (1f + massRatio);   // primary's fraction of a
+            float f2 = 1f / (1f + massRatio);          // companion's fraction
             Vector3 dir = new Vector3(Mathf.Cos(theta), 0f, Mathf.Sin(theta));
-            Vector3 c1 = -dir * (separation * massRatio / mTotal);
-            Vector3 c2 = dir * (separation * 1f / mTotal);
+            Vector3 c1 = -dir * (separation * f1);
+            Vector3 c2 = dir * (separation * f2);
             mat.SetVector(Hole1PosId, c1);
             mat.SetVector(Hole2PosId, c2);
 

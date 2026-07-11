@@ -219,7 +219,12 @@ namespace BlackHoleEffect
                 distance *= Mathf.Pow(zoomFactor, scroll);
             if (zoomIn) distance *= 1f - 1.4f * Time.deltaTime;
             if (zoomOut) distance *= 1f + 1.4f * Time.deltaTime;
-            distance = Mathf.Clamp(distance, distanceLimits.x, distanceLimits.y);
+            // The near limit scales with the hole (2.4 Rs) instead of being a
+            // fixed world distance — otherwise small mass presets keep the
+            // camera tens of Rs away and the observer-clock dilation never
+            // visibly drops. At 2.4 Rs the clock reads ×0.76.
+            float minDist = target != null ? Mathf.Max(2.4f * target.lossyScale.x, 0.35f) : distanceLimits.x;
+            distance = Mathf.Clamp(distance, minDist, distanceLimits.y);
 
             float pr = pitch * Mathf.Deg2Rad, yr = yaw * Mathf.Deg2Rad;
             var dir = new Vector3(Mathf.Sin(yr) * Mathf.Cos(pr), Mathf.Sin(pr), Mathf.Cos(yr) * Mathf.Cos(pr));
