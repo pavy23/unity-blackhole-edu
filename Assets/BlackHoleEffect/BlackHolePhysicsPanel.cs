@@ -21,6 +21,8 @@ namespace BlackHoleEffect
         public double massSolarMasses = 4.3e6;
         public string massLabel = "궁수자리 A* (우리은하 중심)";
         public string massLabelEn = "Sagittarius A* (Milky Way center)";
+        public string massLabelJa = "いて座A*（天の川銀河の中心）";
+        public string massLabelZh = "人马座A*（银河系中心）";
 
         [Header("Time Dilation Probe")]
         [Range(1.02f, 20f)] public float probeDistanceRs = 1.5f;
@@ -148,52 +150,76 @@ namespace BlackHoleEffect
 
             // Kerr row (only when the hole is actually spinning).
             float a = controller != null ? controller.spin : 0f;
-            string spinRowKr = "", spinRowEn = "";
+            string spinRow = "";
             if (a > 0.001f)
             {
+                string aS = a.ToString("0.###");
                 string h = BlackHoleController.HorizonRadiusM(a).ToString("0.00");
                 string isco = BlackHoleController.IscoRadiusM(a).ToString("0.00");
-                spinRowKr = "\n스핀        a = " + a.ToString("0.###") + " M · 지평선 " + h + "M · ISCO " + isco + "M";
-                spinRowEn = "\nSpin          a = " + a.ToString("0.###") + " M · horizon " + h + "M · ISCO " + isco + "M";
+                spinRow = Loc.T(
+                    "\n스핀        a = " + aS + " M · 지평선 " + h + "M · ISCO " + isco + "M",
+                    "\nSpin          a = " + aS + " M · horizon " + h + "M · ISCO " + isco + "M",
+                    "\nスピン      a = " + aS + " M · 地平面 " + h + "M · ISCO " + isco + "M",
+                    "\n自旋        a = " + aS + " M · 视界 " + h + "M · ISCO " + isco + "M");
             }
 
-            title.text = Loc.T(massLabel, massLabelEn);
+            string mins = probeMinutes.ToString("0.0");
+            string earthS = earthDiams.ToString("0.#");
+
+            title.text = Loc.T(massLabel, massLabelEn, massLabelJa, massLabelZh);
             body.text = Loc.T(
-                "질량        " + FormatMass(massSolarMasses) + "\n" +
-                "지평선 Rs   " + FormatKm(rsKm) + "\n" +
-                "그림자 지름 " + FormatKm(shadowKm)
-                    + (earthDiams >= 1.0 ? "  (지구 " + earthDiams.ToString("0.#") + "개)" : "") + "\n" +
-                "원반 온도   " + FormatTempK(diskTempK) + "   ·   ISCO 속도  광속의 50%"
-                + spinRowKr
-                + (showDilationRow
-                    ? "\n<color=#9AA3B5>내 시계 1시간 = 탐사선 " + probeMinutes.ToString("0.0") + "분</color>"
-                    : ""),
+                "질량        " + FormatMassCJK(massSolarMasses, "만", "억", " 태양질량") + "\n" +
+                "지평선 Rs   " + FormatKmCJK(rsKm, "만") + "\n" +
+                "그림자 지름 " + FormatKmCJK(shadowKm, "만")
+                    + (earthDiams >= 1.0 ? "  (지구 " + earthS + "개)" : "") + "\n" +
+                "원반 온도   " + FormatTempCJK(diskTempK, "만", "억") + "   ·   ISCO 속도  광속의 50%"
+                + spinRow
+                + (showDilationRow ? "\n<color=#9AA3B5>내 시계 1시간 = 탐사선 " + mins + "분</color>" : ""),
+
                 "Mass          " + FormatMassEn(massSolarMasses) + "\n" +
                 "Horizon Rs   " + FormatKmEn(rsKm) + "\n" +
                 "Shadow dia.  " + FormatKmEn(shadowKm)
-                    + (earthDiams >= 1.0 ? "  (" + earthDiams.ToString("0.#") + " Earths)" : "") + "\n" +
+                    + (earthDiams >= 1.0 ? "  (" + earthS + " Earths)" : "") + "\n" +
                 "Disk temp    " + FormatTempKEn(diskTempK) + "   ·   ISCO speed  0.5 c"
-                + spinRowEn
-                + (showDilationRow
-                    ? "\n<color=#9AA3B5>1 hour on my clock = " + probeMinutes.ToString("0.0") + " min on the probe</color>"
-                    : ""));
+                + spinRow
+                + (showDilationRow ? "\n<color=#9AA3B5>1 hour on my clock = " + mins + " min on the probe</color>" : ""),
+
+                "質量        " + FormatMassCJK(massSolarMasses, "万", "億", " 太陽質量") + "\n" +
+                "地平面 Rs   " + FormatKmCJK(rsKm, "万") + "\n" +
+                "影の直径    " + FormatKmCJK(shadowKm, "万")
+                    + (earthDiams >= 1.0 ? "  (地球 " + earthS + "個分)" : "") + "\n" +
+                "円盤温度    " + FormatTempCJK(diskTempK, "万", "億") + "   ·   ISCO速度  光速の50%"
+                + spinRow
+                + (showDilationRow ? "\n<color=#9AA3B5>私の時計で1時間 = 探査機 " + mins + "分</color>" : ""),
+
+                "质量        " + FormatMassCJK(massSolarMasses, "万", "亿", " 太阳质量") + "\n" +
+                "视界 Rs     " + FormatKmCJK(rsKm, "万") + "\n" +
+                "阴影直径    " + FormatKmCJK(shadowKm, "万")
+                    + (earthDiams >= 1.0 ? "  (地球 " + earthS + "个)" : "") + "\n" +
+                "盘温度      " + FormatTempCJK(diskTempK, "万", "亿") + "   ·   ISCO速度  光速的50%"
+                + spinRow
+                + (showDilationRow ? "\n<color=#9AA3B5>我的1小时 = 探测器 " + mins + "分钟</color>" : ""));
 
             if (clockHeader != null)
-                clockHeader.text = Loc.T("— 같은 시간, 서로 다른 시계 —", "— same time, different clocks —");
+                clockHeader.text = Loc.T("— 같은 시간, 서로 다른 시계 —", "— same time, different clocks —",
+                                         "— 同じ時間、違う時計 —", "— 同样的时间，不同的时钟 —");
             if (farLabel != null)
             {
                 if (float.IsInfinity(obsRs))
-                    farLabel.text = Loc.T("관찰자\n<size=12><color=#9AA3B5>멀리서 지켜보는 나</color></size>",
-                                          "Observer\n<size=12><color=#9AA3B5>us, watching from afar</color></size>");
+                    farLabel.text = Loc.T("관찰자", "Observer", "観測者", "观察者")
+                        + "\n<size=12><color=#9AA3B5>"
+                        + Loc.T("멀리서 지켜보는 나", "us, watching from afar", "遠くから見ている私", "在远处观看的我")
+                        + "</color></size>";
                 else
-                    farLabel.text = Loc.T("관찰자 (나)", "Observer (me)")
+                    farLabel.text = Loc.T("관찰자 (나)", "Observer (me)", "観測者（私）", "观察者（我）")
                         + "\n<size=12><color=#9AA3B5>r = " + obsRs.ToString("0.#")
                         + " Rs · ×" + gObs.ToString("0.000") + "</color></size>";
             }
             if (probeLabel != null)
-                probeLabel.text = Loc.T(
-                    "탐사선\n<size=12><color=#9AA3B5>블랙홀 곁 r = " + probeDistanceRs.ToString("0.0") + " Rs</color></size>",
-                    "Probe\n<size=12><color=#9AA3B5>beside the hole, r = " + probeDistanceRs.ToString("0.0") + " Rs</color></size>");
+                probeLabel.text = Loc.T("탐사선", "Probe", "探査機", "探测器")
+                    + "\n<size=12><color=#9AA3B5>"
+                    + Loc.T("블랙홀 곁 r = ", "beside the hole, r = ", "ブラックホールのそば r = ", "黑洞近旁 r = ")
+                    + probeDistanceRs.ToString("0.0") + " Rs</color></size>";
         }
 
         /// <summary>Runtime API for hotkeys / UI buttons. Besides the numbers,
@@ -207,14 +233,20 @@ namespace BlackHoleEffect
                 case MassPreset.Stellar10:
                     massSolarMasses = 10; massLabel = "항성급 블랙홀 (초신성 잔해)";
                     massLabelEn = "Stellar-mass black hole (supernova remnant)";
+                    massLabelJa = "恒星質量ブラックホール（超新星の残骸）";
+                    massLabelZh = "恒星级黑洞（超新星遗迹）";
                     scale = 0.28f; temp = 1.5f; flow = 2.2f; break;
                 case MassPreset.SagittariusA:
                     massSolarMasses = 4.3e6; massLabel = "궁수자리 A* (우리은하 중심)";
                     massLabelEn = "Sagittarius A* (Milky Way center)";
+                    massLabelJa = "いて座A*（天の川銀河の中心）";
+                    massLabelZh = "人马座A*（银河系中心）";
                     scale = 0.5f; temp = 1.06f; flow = 0.9f; break;
                 case MassPreset.M87:
                     massSolarMasses = 6.5e9; massLabel = "M87* (EHT 최초 관측 대상)";
                     massLabelEn = "M87* (first EHT image target)";
+                    massLabelJa = "M87*（EHT初撮影の対象）";
+                    massLabelZh = "M87*（EHT首张照片的目标）";
                     scale = 0.78f; temp = 0.86f; flow = 0.5f; break;
             }
             if (controller != null)
@@ -227,11 +259,26 @@ namespace BlackHoleEffect
             RefreshText();
         }
 
-        static string FormatMass(double m)
+        // KR/JA/ZH share the 만(万)/억(億/亿) grouping — only the words differ.
+        static string FormatMassCJK(double m, string man, string eok, string unit)
         {
-            if (m >= 1e8) return (m / 1e8).ToString("0.#") + "억 태양질량";
-            if (m >= 1e4) return (m / 1e4).ToString("0.#") + "만 태양질량";
-            return m.ToString("0.#") + " 태양질량";
+            if (m >= 1e8) return (m / 1e8).ToString("0.#") + eok + unit;
+            if (m >= 1e4) return (m / 1e4).ToString("0.#") + man + unit;
+            return m.ToString("0.#") + unit;
+        }
+
+        static string FormatKmCJK(double km, string man)
+        {
+            if (km >= 1e8) return (km / 1.496e8).ToString("0.##") + " AU";
+            if (km >= 1e4) return (km / 1e4).ToString("0.#") + man + " km";
+            return km.ToString("0.#") + " km";
+        }
+
+        static string FormatTempCJK(double k, string man, string eok)
+        {
+            if (k >= 1e8) return (k / 1e8).ToString("0.#") + eok + " K";
+            if (k >= 1e4) return (k / 1e4).ToString("0.#") + man + " K";
+            return k.ToString("0") + " K";
         }
 
         static string FormatMassEn(double m)
@@ -241,24 +288,10 @@ namespace BlackHoleEffect
             return m.ToString("0.#") + " M☉";
         }
 
-        static string FormatTempK(double k)
-        {
-            if (k >= 1e8) return (k / 1e8).ToString("0.#") + "억 K";
-            if (k >= 1e4) return (k / 1e4).ToString("0.#") + "만 K";
-            return k.ToString("0") + " K";
-        }
-
         static string FormatTempKEn(double k)
         {
             if (k >= 1e6) return (k / 1e6).ToString("0.#") + " million K";
             return k.ToString("#,##0") + " K";
-        }
-
-        static string FormatKm(double km)
-        {
-            if (km >= 1e8) return (km / 1.496e8).ToString("0.##") + " AU";
-            if (km >= 1e4) return (km / 1e4).ToString("0.#") + "만 km";
-            return km.ToString("0.#") + " km";
         }
 
         static string FormatKmEn(double km)

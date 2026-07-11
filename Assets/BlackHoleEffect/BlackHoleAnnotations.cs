@@ -98,8 +98,58 @@ namespace BlackHoleEffect
             },
         };
 
+        static readonly string[][] TextsJa =
+        {
+            new[] // 初級
+            {
+                "光さえ逃げられない\n黒い穴です",
+                "ブラックホールの周りを回る\n光のリング",
+                "吸い込まれていく\n熱いガス",
+                "こちら側のガスは速く\n近づくので明るく見えます",
+            },
+            new[] // 中級
+            {
+                "事象の地平面の影\nEvent Horizon Shadow",
+                "光子リング r = 1.5 Rs\nPhoton Ring",
+                "円盤の内縁 ISCO r = 3 Rs\nInnermost Stable Orbit",
+                "ドップラービーミング —\n近づく側が明るい",
+            },
+            new[] // 上級
+            {
+                "事象の地平面の影 — 見かけ半径 2.6 Rs\n(臨界衝突パラメータ b = 3√3·GM/c²)",
+                "光子球 r = 1.5 Rs —\n光の不安定な円軌道",
+                "ISCO r = 3 Rs — 軌道速度 0.5c\n内側に安定軌道は存在しない",
+                "相対論的ビーミング I ∝ δ³\n接近側は青方偏移・後退側は赤方偏移",
+            },
+        };
+
+        static readonly string[][] TextsZh =
+        {
+            new[] // 初级
+            {
+                "连光都逃不出去的\n黑色洞口",
+                "绕着黑洞转的\n光之环",
+                "正被吸入的\n炽热气体",
+                "这一侧的气体快速朝我们\n而来，所以更亮",
+            },
+            new[] // 中级
+            {
+                "事件视界的阴影\nEvent Horizon Shadow",
+                "光子环 r = 1.5 Rs\nPhoton Ring",
+                "吸积盘内缘 ISCO r = 3 Rs\n最内稳定圆轨道",
+                "多普勒聚束 —\n靠近的一侧更亮",
+            },
+            new[] // 高级
+            {
+                "事件视界阴影 — 视半径 2.6 Rs\n(临界碰撞参数 b = 3√3·GM/c²)",
+                "光子球 r = 1.5 Rs —\n光的不稳定圆轨道",
+                "ISCO r = 3 Rs — 轨道速度 0.5c\n其内不存在稳定轨道",
+                "相对论性聚束 I ∝ δ³\n靠近侧蓝移 · 远离侧红移",
+            },
+        };
+
         static string LabelText(Difficulty d, int i)
-            => Loc.T(Texts[(int)d][i], TextsEn[(int)d][i]);
+            => Loc.T(Texts[(int)d][i], TextsEn[(int)d][i], TextsJa[(int)d][i], TextsZh[(int)d][i]);
 
         void OnEnable() => BuildChildren();
         void OnDisable() => DestroyChildren();

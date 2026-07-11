@@ -41,12 +41,12 @@ namespace BlackHoleEffect
             source.volume = 0.95f;
         }
 
-        /// <summary>Plays Resources/Narration/{key} (or Narration/en/{key} in
-        /// English mode) and returns the clip length in seconds (0 when the
-        /// clip is missing, so callers can fall back to their fixed timings).</summary>
+        /// <summary>Plays Resources/Narration/{lang-folder}{key} and returns
+        /// the clip length in seconds (0 when the clip is missing, so callers
+        /// can fall back to their fixed timings).</summary>
         public float Play(string key)
         {
-            var clip = Resources.Load<AudioClip>("Narration/" + (Loc.English ? "en/" : "") + key);
+            var clip = Resources.Load<AudioClip>("Narration/" + Loc.NarrationFolder + key);
             if (clip == null) return 0f;
             source.Stop();
             source.clip = clip;

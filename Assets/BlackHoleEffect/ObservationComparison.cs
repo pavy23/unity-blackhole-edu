@@ -82,12 +82,16 @@ namespace BlackHoleEffect
             panel.gameObject.SetActive(visible);
             if (!visible) return;
 
-            title.text = Loc.T("시뮬레이션 vs 실제 관측", "Simulation vs Real Observation");
+            title.text = Loc.T("시뮬레이션 vs 실제 관측", "Simulation vs Real Observation",
+                               "シミュレーション vs 実観測", "模拟 vs 真实观测");
             image.texture = observationImage;
             // The serialized caption is mostly a photo credit; localize the
             // default one, pass custom captions through unchanged.
             label.text = caption.StartsWith("실제 관측")
-                ? Loc.T(caption, "Real observation: M87* — EHT (2019)\n© EHT Collaboration (CC BY 4.0)")
+                ? Loc.T(caption,
+                        "Real observation: M87* — EHT (2019)\n© EHT Collaboration (CC BY 4.0)",
+                        "実際の観測: M87* — EHT (2019)\n© EHT Collaboration (CC BY 4.0)",
+                        "真实观测: M87* — EHT (2019)\n© EHT Collaboration (CC BY 4.0)")
                 : caption;
             var imgRt = image.rectTransform;
 

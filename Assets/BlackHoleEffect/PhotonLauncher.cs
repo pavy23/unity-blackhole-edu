@@ -282,7 +282,13 @@ namespace BlackHoleEffect
                 "빛의 궤도는 언제나 블랙홀 중심을 지나는 <b>평면</b> 안에 있습니다.\n" +
                 "옆에서 보면 종이처럼 얇아 보이지 않으므로, 이제 궤적 평면이\n항상 화면을 향해 돌아갑니다.",
                 "<color=#FFC46E>Why did the trails vanish from the side?</color>\n" +
-                "A light ray's orbit always lies in a <b>plane</b> through the hole's\ncenter. Edge-on that plane is paper-thin, so the trajectory\nplane now rotates to face your view.");
+                "A light ray's orbit always lies in a <b>plane</b> through the hole's\ncenter. Edge-on that plane is paper-thin, so the trajectory\nplane now rotates to face your view.",
+                "<color=#FFC46E>なぜ横からは軌跡が見えなかったのか？</color>\n" +
+                "光の軌道はつねに、中心を通る<b>平面</b>の中にあります。\n" +
+                "横から見ると紙のように薄くて見えないため、軌跡の平面は\nいつも画面のほうを向くようになっています。",
+                "<color=#FFC46E>为什么从侧面看不到轨迹？</color>\n" +
+                "光的轨道永远位于一个通过黑洞中心的<b>平面</b>内。\n" +
+                "侧视时该平面薄如纸而不可见，因此轨迹平面\n现在会始终朝向你的视角旋转。");
             hintPanel.gameObject.SetActive(true);
             if (hintRoutine != null) StopCoroutine(hintRoutine);
             hintRoutine = StartCoroutine(HideHint());

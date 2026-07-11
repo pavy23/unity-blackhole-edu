@@ -144,12 +144,14 @@ namespace BlackHoleEffect
             tex.SetPixels32(pixels);
             tex.Apply(false);
 
-            title.text = Loc.T("광도 곡선 — 조석 파괴 이벤트", "Light Curve — Tidal Disruption Event");
+            title.text = Loc.T("광도 곡선 — 조석 파괴 이벤트", "Light Curve — Tidal Disruption Event",
+                               "光度曲線 — 潮汐破壊イベント", "光变曲线 — 潮汐瓦解事件");
+            string lum = (1f + 1.7f * flare).ToString("0.00");
             readout.text = Loc.T(
-                "상대 광도 L = " + (1f + 1.7f * flare).ToString("0.00")
-                    + (flare > 0.01f ? "   <color=#FFC46E>★ 플레어!</color>" : "   (T 키로 별을 떨어뜨려 보세요)"),
-                "Relative luminosity L = " + (1f + 1.7f * flare).ToString("0.00")
-                    + (flare > 0.01f ? "   <color=#FFC46E>★ Flare!</color>" : "   (press T to drop a star)"));
+                "상대 광도 L = " + lum + (flare > 0.01f ? "   <color=#FFC46E>★ 플레어!</color>" : "   (T 키로 별을 떨어뜨려 보세요)"),
+                "Relative luminosity L = " + lum + (flare > 0.01f ? "   <color=#FFC46E>★ Flare!</color>" : "   (press T to drop a star)"),
+                "相対光度 L = " + lum + (flare > 0.01f ? "   <color=#FFC46E>★ フレア！</color>" : "   (Tキーで星を落とせます)"),
+                "相对光度 L = " + lum + (flare > 0.01f ? "   <color=#FFC46E>★ 耀发！</color>" : "   (按T键让恒星坠落)"));
         }
 
         static int ToY(float v)

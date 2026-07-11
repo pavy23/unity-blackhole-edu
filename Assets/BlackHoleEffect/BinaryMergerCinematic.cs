@@ -47,6 +47,22 @@ namespace BlackHoleEffect
             "What remains is a single black hole — larger, and spinning fast. On September 14th, 2015, humanity heard this sound for the first time: GW150914.",
         };
 
+        public static readonly string[] LinesJa =
+        {
+            "ふたつのブラックホールが互いの周りを回っています。重力波でエネルギーを失いながら、らせんを描いてゆっくりと近づいていきます。",
+            "近づくほど公転は速くなり、時空のさざ波である重力波は、どんどん高い音で鳴り響きます。これがLIGOが聴いた「チャープ」です。",
+            "合体！ふたつの地平面がひとつになり、太陽3個分の質量が純粋な重力波のエネルギーとして宇宙に放たれます。",
+            "残ったのは、より大きく、速く回転するひとつのブラックホール。2015年9月14日、人類はこの音を初めて聴きました。GW150914です。",
+        };
+
+        public static readonly string[] LinesZh =
+        {
+            "两个黑洞正在互相绕转。它们因引力波而失去能量，沿着螺旋轨道慢慢靠近。",
+            "越靠近，公转越快，时空的涟漪——引力波——发出的音调也越来越高。这就是LIGO听到的“啁啾”声。",
+            "并合！两个视界合而为一，相当于三个太阳的质量化作纯粹的引力波能量释放到宇宙中。",
+            "留下的是一个更大、快速旋转的黑洞。2015年9月14日，人类第一次听到了这个声音——GW150914。",
+        };
+
         static readonly int BinaryOnId = Shader.PropertyToID("_BinaryOn");
         static readonly int Hole1PosId = Shader.PropertyToID("_Hole1Pos");
         static readonly int Hole2PosId = Shader.PropertyToID("_Hole2Pos");
@@ -314,7 +330,7 @@ namespace BlackHoleEffect
                 caption.horizontalOverflow = HorizontalWrapMode.Wrap;
             }
             captionPanel.gameObject.SetActive(true);
-            caption.text = Loc.T(Lines[i], LinesEn[i]);
+            caption.text = Loc.T(Lines[i], LinesEn[i], LinesJa[i], LinesZh[i]);
         }
 
         void HideCaption()

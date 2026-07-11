@@ -44,6 +44,24 @@ namespace BlackHoleEffect
             "And what remains behind... is a black hole, from which not even light can escape.",
         };
 
+        public static readonly string[] LinesJa =
+        {
+            "ある星の最後の日です。何百万年も輝いてきた星が、いま燃料を使い果たそうとしています。",
+            "燃料が尽きた星は赤くふくらみ、巨大な赤色巨星になります。",
+            "自らの重さを支えきれなくなった中心核が、一瞬で崩れ落ちます。",
+            "超新星爆発！星の外層が宇宙のかなたへ吹き飛ばされます。",
+            "そして残されたのは……光さえ逃げられない、ブラックホールです。",
+        };
+
+        public static readonly string[] LinesZh =
+        {
+            "这是一颗恒星的最后一天。闪耀了数百万年的星，燃料即将耗尽。",
+            "燃料耗尽后，恒星膨胀发红，成为巨大的红巨星。",
+            "再也支撑不住自身重量的核心，在一瞬间坍缩。",
+            "超新星爆发！恒星的外层被抛向宇宙深处。",
+            "最后留下的……是一个连光都无法逃脱的黑洞。",
+        };
+
         public void Play()
         {
             if (!Application.isPlaying || IsPlaying) return;
@@ -178,7 +196,7 @@ namespace BlackHoleEffect
         /// never shorter than the animation's minimum).</summary>
         float Narrate(int i, float minSeconds)
         {
-            Caption(Loc.T(Lines[i], LinesEn[i]));
+            Caption(Loc.T(Lines[i], LinesEn[i], LinesJa[i], LinesZh[i]));
             float len = NarrationManager.Instance.Play("intro_" + i);
             return Mathf.Max(minSeconds, len + 0.4f);
         }

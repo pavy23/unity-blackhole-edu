@@ -16,24 +16,27 @@ namespace BlackHoleEffect
         public float bobAmplitude = 0.15f;
         public float bobPeriod = 34f;
 
-        float baseHeight;
         float enableTime;
+        float lastBob;
 
-        // Re-baseline on every enable so resuming after manual camera control
-        // continues smoothly from wherever the user left the camera (no snap
-        // back to the original height, bob phase restarts at zero offset).
         void OnEnable()
         {
-            baseHeight = transform.position.y;
             enableTime = Time.time;
+            lastBob = 0f;
         }
 
         void LateUpdate()
         {
             if (target == null) return;
             transform.RotateAround(target.position, Vector3.up, orbitSpeed * Time.deltaTime);
+
+            // Bob is applied as an INCREMENT, never as an absolute height —
+            // an absolute assignment would overwrite the user's pitch input
+            // every frame (right-drag up/down felt dead because of that).
+            float bob = Mathf.Sin((Time.time - enableTime) * (2f * Mathf.PI / bobPeriod)) * bobAmplitude;
             var p = transform.position;
-            p.y = baseHeight + Mathf.Sin((Time.time - enableTime) * (2f * Mathf.PI / bobPeriod)) * bobAmplitude;
+            p.y += bob - lastBob;
+            lastBob = bob;
             transform.position = p;
             transform.LookAt(target.position);
         }
