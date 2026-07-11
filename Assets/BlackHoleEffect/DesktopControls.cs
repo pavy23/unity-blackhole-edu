@@ -10,7 +10,7 @@ namespace BlackHoleEffect
     ///
     ///   우클릭 드래그  카메라 궤도 회전      휠           줌
     ///   1 / 2 / 3     색 프리셋             4 / 5 / 6    질량 프리셋
-    ///   Space         광자 발사             C            궤적 지우기
+    ///   Space         광자 발사/지우기 토글
     ///   E             아인슈타인 링         A / D        데모 별 이동
     ///   L             라벨                  I            물리 패널
     ///   O             관측사진 비교         H            도움말
@@ -42,6 +42,11 @@ namespace BlackHoleEffect
 
         TheoryPanel theory;
         BinaryMergerCinematic binary;
+
+        bool CinematicBusy =>
+            (intro != null && intro.IsPlaying) ||
+            (fallIn != null && fallIn.IsFalling) ||
+            (binary != null && binary.Running);
 
         void CycleDifficulty()
         {
@@ -252,7 +257,6 @@ namespace BlackHoleEffect
             if (kb.digit4Key.wasPressedThisFrame) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.Stellar10);
             if (kb.digit5Key.wasPressedThisFrame) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.SagittariusA);
             if (kb.digit6Key.wasPressedThisFrame) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.M87);
-            if (kb.cKey.wasPressedThisFrame) launcher?.ClearTrails();
             if (kb.eKey.wasPressedThisFrame && einsteinDemo != null) einsteinDemo.active = !einsteinDemo.active;
             if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
@@ -261,9 +265,13 @@ namespace BlackHoleEffect
             if (kb.f2Key.wasPressedThisFrame) CycleDifficulty();
             if (kb.f3Key.wasPressedThisFrame && lensDemo != null) lensDemo.Toggle();
             if (kb.f4Key.wasPressedThisFrame && (binary == null || !binary.Running)) CycleSpin();
-            if (kb.f7Key.wasPressedThisFrame && binary != null) binary.Begin();
-            if (kb.f5Key.wasPressedThisFrame && intro != null) intro.Play();
-            if (kb.f6Key.wasPressedThisFrame && fallIn != null) fallIn.Begin();
+            // One cinematic at a time — F5/F6/F7 are ignored while another runs.
+            if (!CinematicBusy)
+            {
+                if (kb.f7Key.wasPressedThisFrame && binary != null) binary.Begin();
+                if (kb.f5Key.wasPressedThisFrame && intro != null) intro.Play();
+                if (kb.f6Key.wasPressedThisFrame && fallIn != null) fallIn.Begin();
+            }
             if (kb.vKey.wasPressedThisFrame && lightCurve != null) lightCurve.show = !lightCurve.show;
             if (kb.f12Key.wasPressedThisFrame) Snapshot();
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
@@ -292,7 +300,6 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.Alpha4)) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.Stellar10);
             if (Input.GetKeyDown(KeyCode.Alpha5)) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.SagittariusA);
             if (Input.GetKeyDown(KeyCode.Alpha6)) panel?.SetMassPreset(BlackHolePhysicsPanel.MassPreset.M87);
-            if (Input.GetKeyDown(KeyCode.C)) launcher?.ClearTrails();
             if (Input.GetKeyDown(KeyCode.E) && einsteinDemo != null) einsteinDemo.active = !einsteinDemo.active;
             if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
@@ -301,9 +308,12 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.F2)) CycleDifficulty();
             if (Input.GetKeyDown(KeyCode.F3) && lensDemo != null) lensDemo.Toggle();
             if (Input.GetKeyDown(KeyCode.F4) && (binary == null || !binary.Running)) CycleSpin();
-            if (Input.GetKeyDown(KeyCode.F7) && binary != null) binary.Begin();
-            if (Input.GetKeyDown(KeyCode.F5) && intro != null) intro.Play();
-            if (Input.GetKeyDown(KeyCode.F6) && fallIn != null) fallIn.Begin();
+            if (!CinematicBusy)
+            {
+                if (Input.GetKeyDown(KeyCode.F7) && binary != null) binary.Begin();
+                if (Input.GetKeyDown(KeyCode.F5) && intro != null) intro.Play();
+                if (Input.GetKeyDown(KeyCode.F6) && fallIn != null) fallIn.Begin();
+            }
             if (Input.GetKeyDown(KeyCode.V) && lightCurve != null) lightCurve.show = !lightCurve.show;
             if (Input.GetKeyDown(KeyCode.F12)) Snapshot();
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
@@ -374,14 +384,15 @@ namespace BlackHoleEffect
         void BuildHelp()
         {
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            // Three explicit rows + wrap so no language ever spills past the bar.
+            // Two compact rows + wrap; the bar height then hugs whatever the
+            // current language actually needs (see UpdateHelpText).
             var bar = BlackHoleUI.MakePanel(canvas.transform, "Help Bar",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1600f, 88f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1600f, 62f),
                 accentLine: false);
             helpBar = bar.gameObject;
 
             help = BlackHoleUI.MakeText(bar, "Help Text", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1560f, 80f));
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1560f, 54f));
             help.horizontalOverflow = HorizontalWrapMode.Wrap;
             UpdateHelpText();
         }
@@ -391,38 +402,49 @@ namespace BlackHoleEffect
         void UpdateHelpText()
         {
             if (help == null) return;
+            // Two compact rows (Space now toggles photons, so C is gone).
             help.text = Loc.T(
-                Key("우클릭 드래그") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("1·2·3") + "색상  "
-                    + Key("4·5·6") + "질량  " + Key("Space") + "광자  " + Key("C") + "지우기\n"
-                + Key("E") + "아인슈타인 링(A/D)  " + Key("T") + "스파게티화  " + Key("J") + "제트  " + Key("G") + "투어(N/B)  "
-                    + Key("X") + "수식  " + Key("V") + "광도곡선  " + Key("L") + "라벨  " + Key("I") + "패널  " + Key("O") + "관측사진\n"
-                + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("F2") + "난이도  " + Key("F3") + "렌즈  "
-                    + Key("F4") + "스핀  " + Key("F5") + "인트로  " + Key("F6") + "낙하  " + Key("F7") + "병합  "
-                    + Key("F12") + "스냅샷  " + Key("F1") + "성능  " + Key("H") + "도움말",
+                Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("1·2·3") + "색상  "
+                    + Key("4·5·6") + "질량  " + Key("Space") + "광자 발사/지우기  " + Key("L") + "라벨  "
+                    + Key("I") + "패널  " + Key("U") + "몰입  " + Key("H") + "도움말\n"
+                + Key("E") + "링(A/D)  " + Key("T") + "스파게티화  " + Key("J") + "제트  " + Key("G") + "투어(N/B)  "
+                    + Key("X") + "수식  " + Key("V") + "광도  " + Key("O") + "관측사진  " + Key("M") + "소리  " + Key("K") + "언어  "
+                    + Key("F2") + "난이도  " + Key("F3") + "렌즈  " + Key("F4") + "스핀  " + Key("F5") + "인트로  "
+                    + Key("F6") + "낙하  " + Key("F7") + "병합  " + Key("F12") + "스냅샷  " + Key("F1") + "성능",
 
-                Key("RMB drag") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("1·2·3") + "colors  "
-                    + Key("4·5·6") + "mass  " + Key("Space") + "photons  " + Key("C") + "clear\n"
-                + Key("E") + "Einstein ring(A/D)  " + Key("T") + "spaghettify  " + Key("J") + "jets  " + Key("G") + "tour(N/B)  "
-                    + Key("X") + "math  " + Key("V") + "light curve  " + Key("L") + "labels  " + Key("I") + "panel  " + Key("O") + "EHT photo\n"
-                + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("F2") + "level  " + Key("F3") + "lens  "
-                    + Key("F4") + "spin  " + Key("F5") + "intro  " + Key("F6") + "fall-in  " + Key("F7") + "merger  "
-                    + Key("F12") + "snapshot  " + Key("F1") + "perf  " + Key("H") + "help",
+                Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("1·2·3") + "colors  "
+                    + Key("4·5·6") + "mass  " + Key("Space") + "photons fire/clear  " + Key("L") + "labels  "
+                    + Key("I") + "panel  " + Key("U") + "immersive  " + Key("H") + "help\n"
+                + Key("E") + "ring(A/D)  " + Key("T") + "spaghettify  " + Key("J") + "jets  " + Key("G") + "tour(N/B)  "
+                    + Key("X") + "math  " + Key("V") + "light curve  " + Key("O") + "EHT photo  " + Key("M") + "sound  " + Key("K") + "language  "
+                    + Key("F2") + "level  " + Key("F3") + "lens  " + Key("F4") + "spin  " + Key("F5") + "intro  "
+                    + Key("F6") + "fall-in  " + Key("F7") + "merger  " + Key("F12") + "snapshot  " + Key("F1") + "perf",
 
                 Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("1·2·3") + "色  "
-                    + Key("4·5·6") + "質量  " + Key("Space") + "光子  " + Key("C") + "消去\n"
-                + Key("E") + "アインシュタインリング(A/D)  " + Key("T") + "スパゲッティ化  " + Key("J") + "ジェット  " + Key("G") + "ツアー(N/B)  "
-                    + Key("X") + "数式  " + Key("V") + "光度曲線  " + Key("L") + "ラベル  " + Key("I") + "パネル  " + Key("O") + "観測写真\n"
-                + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("F2") + "難易度  " + Key("F3") + "レンズ  "
-                    + Key("F4") + "スピン  " + Key("F5") + "イントロ  " + Key("F6") + "落下  " + Key("F7") + "合体  "
-                    + Key("F12") + "撮影  " + Key("F1") + "性能  " + Key("H") + "ヘルプ",
+                    + Key("4·5·6") + "質量  " + Key("Space") + "光子 発射/消去  " + Key("L") + "ラベル  "
+                    + Key("I") + "パネル  " + Key("U") + "没入  " + Key("H") + "ヘルプ\n"
+                + Key("E") + "リング(A/D)  " + Key("T") + "スパゲッティ化  " + Key("J") + "ジェット  " + Key("G") + "ツアー(N/B)  "
+                    + Key("X") + "数式  " + Key("V") + "光度  " + Key("O") + "観測写真  " + Key("M") + "音  " + Key("K") + "言語  "
+                    + Key("F2") + "難易度  " + Key("F3") + "レンズ  " + Key("F4") + "スピン  " + Key("F5") + "イントロ  "
+                    + Key("F6") + "落下  " + Key("F7") + "合体  " + Key("F12") + "撮影  " + Key("F1") + "性能",
 
-                Key("右键拖动") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("1·2·3") + "颜色  "
-                    + Key("4·5·6") + "质量  " + Key("Space") + "光子  " + Key("C") + "清除\n"
-                + Key("E") + "爱因斯坦环(A/D)  " + Key("T") + "面条化  " + Key("J") + "喷流  " + Key("G") + "导览(N/B)  "
-                    + Key("X") + "公式  " + Key("V") + "光变曲线  " + Key("L") + "标签  " + Key("I") + "面板  " + Key("O") + "观测照片\n"
-                + Key("U") + "沉浸  " + Key("M") + "声音  " + Key("K") + "语言  " + Key("F2") + "难度  " + Key("F3") + "透镜  "
-                    + Key("F4") + "自旋  " + Key("F5") + "序章  " + Key("F6") + "坠落  " + Key("F7") + "并合  "
-                    + Key("F12") + "截图  " + Key("F1") + "性能  " + Key("H") + "帮助");
+                Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("1·2·3") + "颜色  "
+                    + Key("4·5·6") + "质量  " + Key("Space") + "光子 发射/清除  " + Key("L") + "标签  "
+                    + Key("I") + "面板  " + Key("U") + "沉浸  " + Key("H") + "帮助\n"
+                + Key("E") + "透镜环(A/D)  " + Key("T") + "面条化  " + Key("J") + "喷流  " + Key("G") + "导览(N/B)  "
+                    + Key("X") + "公式  " + Key("V") + "光变  " + Key("O") + "观测照片  " + Key("M") + "声音  " + Key("K") + "语言  "
+                    + Key("F2") + "难度  " + Key("F3") + "透镜  " + Key("F4") + "自旋  " + Key("F5") + "序章  "
+                    + Key("F6") + "坠落  " + Key("F7") + "并合  " + Key("F12") + "截图  " + Key("F1") + "性能");
+
+            // Size the bar to the language: preferredHeight accounts for the
+            // wrapped line count at the current rect width.
+            if (helpBar != null)
+            {
+                var barRt = helpBar.GetComponent<RectTransform>();
+                float h = Mathf.Max(help.preferredHeight, 24f);
+                help.rectTransform.sizeDelta = new Vector2(help.rectTransform.sizeDelta.x, h);
+                barRt.sizeDelta = new Vector2(barRt.sizeDelta.x, h + 20f);
+            }
         }
     }
 }

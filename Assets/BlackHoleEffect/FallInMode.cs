@@ -6,9 +6,11 @@ namespace BlackHoleEffect
 {
     /// <summary>
     /// First-person fall into the event horizon (F6): the camera free-falls
-    /// toward the hole while the shadow swells to fill the sky — every last
-    /// pixel goes black because, physically, every light path from where you
-    /// are now ends inside. Then the camera is returned safely. Play mode only.
+    /// toward the hole while the shadow swells to fill the sky. Looking
+    /// forward everything ends black — but the epilogue turns the view
+    /// around: the outside universe stays visible, gathered into an
+    /// ever-shrinking, blueshifting circle (aberration for an infalling
+    /// observer). A stop button / Esc aborts at any time. Play mode only.
     /// </summary>
     public class FallInMode : MonoBehaviour
     {
@@ -21,11 +23,49 @@ namespace BlackHoleEffect
 
         Text caption;
         RectTransform captionPanel;
+        Button stopButton;
+        Coroutine routine;
+        Vector3 savedPos;
+        Quaternion savedRot;
+        Image skyImage;
+        Texture2D skyTex;
 
         public void Begin()
         {
             if (!Application.isPlaying || IsFalling || hole == null) return;
-            StartCoroutine(Run());
+            routine = StartCoroutine(Run());
+        }
+
+        void Update()
+        {
+            if (!IsFalling) return;
+#if ENABLE_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) Abort();
+#else
+            if (Input.GetKeyDown(KeyCode.Escape)) Abort();
+#endif
+        }
+
+        /// <summary>Stop button / Esc: kill the coroutine and put the camera
+        /// (and every overlay) back exactly where the fall started.</summary>
+        public void Abort()
+        {
+            if (!IsFalling) return;
+            if (routine != null) StopCoroutine(routine);
+            DestroySkyDisk();
+            transform.position = savedPos;
+            transform.rotation = savedRot;
+            Finish();
+        }
+
+        void Finish()
+        {
+            HideCaption();
+            ShowStop(false);
+            if (controls != null) { controls.SetImmersive(false); controls.suspendCamera = false; }
+            if (orbit != null) orbit.enabled = true; // the drift never stays off
+            IsFalling = false;
         }
 
         IEnumerator Run()
@@ -33,12 +73,13 @@ namespace BlackHoleEffect
             IsFalling = true;
             if (controls != null) { controls.SetImmersive(true); controls.suspendCamera = true; }
             if (orbit != null) orbit.enabled = false;
+            ShowStop(true);
 
-            Vector3 startPos = transform.position;
-            Quaternion startRot = transform.rotation;
+            savedPos = transform.position;
+            savedRot = transform.rotation;
             float rs = hole.lossyScale.x;
-            Vector3 dir = (startPos - hole.position).normalized;
-            float r0 = (startPos - hole.position).magnitude / rs;
+            Vector3 dir = (savedPos - hole.position).normalized;
+            float r0 = (savedPos - hole.position).magnitude / rs;
 
             for (float t = 0f; t < fallDuration; t += Time.deltaTime)
             {
@@ -75,6 +116,34 @@ namespace BlackHoleEffect
                     "已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
                 yield return null;
             }
+            yield return new WaitForSeconds(2f);
+
+            // --- Epilogue: turn around. The view "forward" (toward the
+            // singularity) really is black — but looking back, the outside
+            // universe never disappears: aberration gathers the whole sky
+            // into a shrinking, blueshifting circle of light.
+            Caption(Loc.T(
+                "뒤를 돌아보면 — 바깥 우주는 사라지지 않습니다.\n온 하늘이 점점 좁아지는 푸른 빛의 원 안으로 모여듭니다.",
+                "Looking back — the outside universe never vanishes.\nThe whole sky gathers into a shrinking, blueshifting circle of light.",
+                "後ろを振り返ると — 外の宇宙は消えていません。\n空全体が、狭まっていく青い光の円の中に集まって見えます。",
+                "回头看——外面的宇宙并没有消失。\n整个天空聚成一个越来越小、越来越蓝的光圈。"));
+            // Drawn as a screen-space image: the camera sits inside the
+            // raymarch quad here, so world-space props would be occluded.
+            EnsureSkyImage();
+            skyImage.gameObject.SetActive(true);
+            const float lookBack = 7f;
+            for (float t = 0f; t < lookBack; t += Time.deltaTime)
+            {
+                float k = t / lookBack;
+                float size = Mathf.Lerp(640f, 16f, Mathf.Pow(k, 1.35f));
+                skyImage.rectTransform.sizeDelta = new Vector2(size, size);
+                // White → blueshifted, fading out only at the very end.
+                Color c = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
+                c.a = Mathf.Clamp01((1f - k) * 8f);
+                skyImage.color = c;
+                yield return null;
+            }
+            skyImage.gameObject.SetActive(false);
 
             Caption(Loc.T(
                 "이 안에서는 모든 미래의 경로가 중심 특이점을 향합니다.\n— 여기까지가 물리학이 말할 수 있는 전부입니다.",
@@ -83,12 +152,73 @@ namespace BlackHoleEffect
                 "在这里，所有未来的路径都通向中心奇点。\n— 物理学能讲述的，到此为止。"));
             yield return new WaitForSeconds(3.5f);
 
-            transform.position = startPos;
-            transform.rotation = startRot;
-            HideCaption();
-            if (controls != null) { controls.SetImmersive(false); controls.suspendCamera = false; }
-            if (orbit != null) orbit.enabled = true; // the drift never stays off
-            IsFalling = false;
+            transform.position = savedPos;
+            transform.rotation = savedRot;
+            Finish();
+        }
+
+        // ---------------- looking-back sky circle ----------------
+        void EnsureSkyImage()
+        {
+            if (skyImage != null) return;
+            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+            var go = new GameObject("FallIn Sky") { hideFlags = HideFlags.DontSave };
+            go.transform.SetParent(canvas.transform, false);
+            // Behind the caption/buttons (last siblings draw on top anyway
+            // because the caption panel was created earlier — keep this first).
+            go.transform.SetSiblingIndex(0);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+            skyImage = go.AddComponent<Image>();
+            skyImage.raycastTarget = false;
+            var tex = SkyTexture();
+            skyImage.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        void DestroySkyDisk()
+        {
+            if (skyImage != null) skyImage.gameObject.SetActive(false);
+        }
+
+        /// <summary>Soft "compressed starry sky" disk: a bright core with a
+        /// speckle of stars, dying out well inside the quad.</summary>
+        Texture2D SkyTexture()
+        {
+            if (skyTex != null) return skyTex;
+            const int dim = 128;
+            skyTex = new Texture2D(dim, dim, TextureFormat.RGBA32, false);
+            float c = (dim - 1) * 0.5f;
+            var rng = new System.Random(7);
+            for (int y = 0; y < dim; y++)
+            for (int x = 0; x < dim; x++)
+            {
+                float d = Mathf.Sqrt((x - c) * (x - c) + (y - c) * (y - c)) / c;
+                float core = Mathf.Exp(-d * d * 3.2f);
+                float rim = Mathf.Exp(-Mathf.Abs(d - 0.72f) * 14f) * 0.5f; // bright compressed rim
+                float star = (float)rng.NextDouble() < 0.02f && d < 0.75f ? 0.65f : 0f;
+                float a = Mathf.Clamp01((core + rim + star) * Mathf.Clamp01((0.85f - d) * 8f));
+                skyTex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+            }
+            skyTex.Apply();
+            return skyTex;
+        }
+
+        // ---------------- UI ----------------
+        void ShowStop(bool on)
+        {
+            if (stopButton == null)
+            {
+                if (!on) return;
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                stopButton = BlackHoleUI.MakeButton(canvas.transform, "FallIn Stop", "",
+                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(170f, 44f), Abort);
+            }
+            stopButton.gameObject.SetActive(on);
+            if (on)
+                stopButton.GetComponentInChildren<Text>().text =
+                    Loc.T("중단 ■", "Stop ■", "中止 ■", "停止 ■");
         }
 
         void Caption(string text)

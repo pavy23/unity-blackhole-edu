@@ -44,7 +44,10 @@ namespace BlackHoleEffect
             (new Vector2(0f, 2.6f),      new Vector2(0f, 5.2f)),
             (new Vector2(-1.9f, -1.9f),  new Vector2(-4.4f, -4.2f)),
             (new Vector2(4.0f, -0.2f),   new Vector2(6.2f, -3.6f)),
-            (new Vector2(-5.5f, 0.3f),   new Vector2(-6.6f, 3.6f)),
+            // Doppler beaming: the approaching (bright) side is screen-RIGHT
+            // (disk velocity +cross(ŷ, r̂) in the camera-facing basis), and
+            // the old upper-left spot sat on top of the physics panel.
+            (new Vector2(5.4f, 0.6f),    new Vector2(6.6f, 3.4f)),
         };
 
         // Per-difficulty label text (index-aligned with Defs).

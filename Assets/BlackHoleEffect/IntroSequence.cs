@@ -17,11 +17,17 @@ namespace BlackHoleEffect
         public BlackHoleController controller;
         public DesktopControls controls;
 
+        [Tooltip("Play the birth-of-a-black-hole intro automatically when play mode starts (once per session; F5 replays it).")]
+        public bool autoPlayOnStart = true;
+
         public bool IsPlaying { get; private set; }
 
         Text caption;
         RectTransform captionPanel;
         Image flash;
+        Button skipButton;
+        Coroutine routine;
+        float savedBrightness = 9.5f;
 
         // Captions double as the narration transcript — the TTS clips
         // (Resources/Narration/intro_* and Narration/en/intro_*) are generated
@@ -62,18 +68,86 @@ namespace BlackHoleEffect
             "最后留下的……是一个连光都无法逃脱的黑洞。",
         };
 
+        void Start()
+        {
+            if (autoPlayOnStart && Application.isPlaying)
+                StartCoroutine(AutoPlay());
+        }
+
+        IEnumerator AutoPlay()
+        {
+            // A short beat so the scene (canvas, narration, audio) settles in.
+            yield return new WaitForSeconds(0.8f);
+            Play();
+        }
+
+        void Update()
+        {
+            if (!IsPlaying) return;
+#if ENABLE_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) Skip();
+#else
+            if (Input.GetKeyDown(KeyCode.Escape)) Skip();
+#endif
+        }
+
         public void Play()
         {
             if (!Application.isPlaying || IsPlaying) return;
-            StartCoroutine(Run());
+            routine = StartCoroutine(Run());
+        }
+
+        /// <summary>Aborts the intro (skip button / Esc): kills the coroutine,
+        /// sweeps every stage prop and restores the exploration view.</summary>
+        public void Skip()
+        {
+            if (!IsPlaying) return;
+            if (routine != null) StopCoroutine(routine);
+            NarrationManager.Instance.Stop();
+            Sweep("Doomed Star");
+            Sweep("Supernova Shell");
+            if (flash != null) flash.color = Color.clear;
+            if (holeRenderer != null) holeRenderer.enabled = true;
+            if (controller != null)
+            {
+                controller.diskBrightness = savedBrightness;
+                controller.Apply();
+            }
+            Finish();
+        }
+
+        void Finish()
+        {
+            HideCaption();
+            ShowSkip(false);
+            if (controls != null) controls.SetImmersive(false);
+            IsPlaying = false;
+        }
+
+        void ShowSkip(bool on)
+        {
+            if (skipButton == null)
+            {
+                if (!on) return;
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                skipButton = BlackHoleUI.MakeButton(canvas.transform, "Intro Skip", "",
+                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(170f, 44f), Skip);
+            }
+            skipButton.gameObject.SetActive(on);
+            if (on)
+                skipButton.GetComponentInChildren<Text>().text =
+                    Loc.T("건너뛰기 ▸", "Skip ▸", "スキップ ▸", "跳过 ▸");
         }
 
         IEnumerator Run()
         {
             IsPlaying = true;
             if (controls != null) controls.SetImmersive(true);
+            ShowSkip(true);
 
             float baseBrightness = controller != null ? controller.diskBrightness : 9.5f;
+            savedBrightness = baseBrightness;
             Vector3 center = holeRenderer != null ? holeRenderer.transform.position : Vector3.zero;
             if (holeRenderer != null) holeRenderer.enabled = false;
 
@@ -186,9 +260,7 @@ namespace BlackHoleEffect
             }
             yield return new WaitForSeconds(2f);
 
-            HideCaption();
-            if (controls != null) controls.SetImmersive(false);
-            IsPlaying = false;
+            Finish();
         }
 
         /// <summary>Shows the caption for phase i, starts its narration clip,

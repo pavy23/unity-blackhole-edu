@@ -183,9 +183,12 @@ Shader "BlackHole/RaymarchedBlackHole"
                     return float3(0.0, 0.0, 0.0);
 
                 float x = (r - _DiskInner) / (_DiskOuter - _DiskInner);
+                // Wide outer taper: on the Doppler-bright side the HDR boost
+                // keeps the rim saturated until density is tiny, so a short
+                // fade band reads as a hard vertical cut at the disk edge.
                 float density = smoothstep(0.0, 0.06, x)
                               * exp(-3.0 * x)
-                              * (1.0 - smoothstep(0.82, 1.0, x));
+                              * (1.0 - smoothstep(0.55, 1.0, x));
 
                 // Keplerian differential rotation shears the noise into
                 // streaks; +ωt so the pattern moves along the same direction
@@ -218,15 +221,19 @@ Shader "BlackHole/RaymarchedBlackHole"
                 if (_HazeStrength <= 0.001) return;
                 float rSim = length(p.xz);
                 float r = rSim * 0.5;
-                if (r < _DiskInner * 0.85 || r > _DiskOuter * 1.05) return;
+                if (r < _DiskInner * 0.85 || r > _DiskOuter * 1.12) return;
 
                 float H = 0.05 * rSim + 0.08;      // flaring slab half-height (sim units)
                 float ay = abs(p.y);
                 if (ay > H) return;
 
-                float x = saturate((r - _DiskInner) / (_DiskOuter - _DiskInner));
+                // Unclamped so the glow tapers past the sheet edge instead of
+                // holding constant density and then cutting off (that constant
+                // band used to draw a hard vertical edge at the disk tips).
+                float x = (r - _DiskInner) / (_DiskOuter - _DiskInner);
                 float vertical = exp(-(ay * ay) / (H * H * 0.25));
-                float radial = exp(-2.8 * x) * smoothstep(0.0, 0.1, x);
+                float radial = exp(-2.8 * saturate(x)) * smoothstep(0.0, 0.1, x)
+                             * (1.0 - smoothstep(0.8, 1.12, x));
 
                 // Circle-embedded angle: periodic, no seam at ang = ±π.
                 float ang = atan2(p.z, p.x);

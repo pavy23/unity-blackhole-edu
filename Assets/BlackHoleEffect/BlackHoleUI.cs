@@ -137,6 +137,57 @@ namespace BlackHoleEffect
             return t;
         }
 
+        /// <summary>Clickable rounded button (used by cinematic skip/stop).
+        /// Lazily adds the GraphicRaycaster + EventSystem the rest of the UI
+        /// never needed — everything else is display-only.</summary>
+        public static Button MakeButton(Transform parent, string name, string label,
+            Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size, UnityEngine.Events.UnityAction onClick)
+        {
+            EnsureInteraction();
+
+            var go = new GameObject(name) { hideFlags = HideFlags.DontSave };
+            go.transform.SetParent(parent, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = rt.anchorMax = anchor;
+            rt.pivot = pivot;
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+
+            var img = go.AddComponent<Image>();
+            img.sprite = RoundedSprite;
+            img.type = Image.Type.Sliced;
+            img.color = new Color(0.09f, 0.12f, 0.18f, 0.92f);
+            img.raycastTarget = true;
+
+            var btn = go.AddComponent<Button>();
+            btn.targetGraphic = img;
+            var colors = btn.colors;
+            colors.highlightedColor = new Color(1.25f, 1.35f, 1.5f, 1f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+            btn.colors = colors;
+            if (onClick != null) btn.onClick.AddListener(onClick);
+
+            var t = MakeText(go.transform, "Label", 17, TitleGold, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero,
+                new Vector2(size.x - 10f, size.y - 6f), FontStyle.Bold);
+            t.text = label;
+            return btn;
+        }
+
+        static void EnsureInteraction()
+        {
+            if (canvas != null && canvas.GetComponent<GraphicRaycaster>() == null)
+                canvas.gameObject.AddComponent<GraphicRaycaster>();
+            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+            var es = new GameObject("BlackHole EventSystem") { hideFlags = HideFlags.DontSave };
+            es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+#if ENABLE_INPUT_SYSTEM
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#else
+            es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+#endif
+        }
+
         public static Image MakeImage(Transform parent, string name, Sprite sprite, Color color,
             Vector2 anchor, Vector2 pivot, Vector2 pos, Vector2 size)
         {

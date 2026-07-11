@@ -63,6 +63,12 @@ namespace BlackHoleEffect
             ShowPlaneHint();
         }
 
+        public void ToggleSweep()
+        {
+            if (trails.Count > 0) ClearTrails();
+            else FireSweep();
+        }
+
         [ContextMenu("Clear Trails")]
         public void ClearTrails()
         {
@@ -76,11 +82,12 @@ namespace BlackHoleEffect
         void Update()
         {
             if (!Application.isPlaying) return;
+            // Space toggles: fire a sweep, press again to clear.
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null && kb.spaceKey.wasPressedThisFrame) FireSweep();
+            if (kb != null && kb.spaceKey.wasPressedThisFrame) ToggleSweep();
 #else
-            if (Input.GetKeyDown(KeyCode.Space)) FireSweep();
+            if (Input.GetKeyDown(KeyCode.Space)) ToggleSweep();
 #endif
             if (blackHole == null || trails.Count == 0) return;
             var cam = Camera.main;
@@ -273,9 +280,10 @@ namespace BlackHoleEffect
             {
                 var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
                 hintPanel = BlackHoleUI.MakePanel(canvas.transform, "Photon Plane Hint",
-                    new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -60f), new Vector2(420f, 108f));
+                    new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-24f, -60f), new Vector2(470f, 118f));
                 hintText = BlackHoleUI.MakeText(hintPanel, "Text", 16, BlackHoleUI.TextPrimary, TextAnchor.MiddleLeft,
-                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(380f, 92f));
+                    new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(430f, 104f));
+                hintText.horizontalOverflow = HorizontalWrapMode.Wrap;
             }
             hintText.text = Loc.T(
                 "<color=#FFC46E>왜 옆에서는 궤적이 안 보였을까?</color>\n" +

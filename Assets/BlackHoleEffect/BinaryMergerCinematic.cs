@@ -73,6 +73,14 @@ namespace BlackHoleEffect
         Text caption;
         RectTransform captionPanel;
         Image flash;
+        Button stopButton;
+        Coroutine routine;
+
+        // Exploration state saved by Run, restored on finish OR abort.
+        float savedSpin, savedInner;
+        Vector3 savedScale;
+        LineRenderer[] rings;
+        Material ringMat;
 
         // Orbit state (sim units, GM = c = 1, primary M = 1).
         float separation, theta, mTotal;
@@ -92,18 +100,81 @@ namespace BlackHoleEffect
             var r = controller.GetComponent<Renderer>();
             if (r == null || r.sharedMaterial == null) return;
             mat = r.sharedMaterial;
-            StartCoroutine(Run());
+            routine = StartCoroutine(Run());
+        }
+
+        void Update()
+        {
+            if (!Running) return;
+#if ENABLE_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame) Abort();
+#else
+            if (Input.GetKeyDown(KeyCode.Escape)) Abort();
+#endif
+        }
+
+        /// <summary>Stop button / Esc: kills the cinematic and restores the
+        /// exploration state exactly as the normal ending would.</summary>
+        public void Abort()
+        {
+            if (!Running) return;
+            if (routine != null) StopCoroutine(routine);
+            NarrationManager.Instance.Stop();
+            if (chirpSource != null) chirpSource.Stop();
+            ringdown = false;
+            DestroyRings();
+            if (flash != null) flash.color = Color.clear;
+            controller.transform.localScale = savedScale;
+            controller.spin = savedSpin;
+            controller.diskInnerRadius = savedInner;
+            controller.Apply();
+            if (mat != null) mat.SetFloat(BinaryOnId, 0f);
+            Finish();
+        }
+
+        void Finish()
+        {
+            HideCaption();
+            ShowStop(false);
+            if (controls != null) controls.SetImmersive(false);
+            Running = false;
+        }
+
+        void DestroyRings()
+        {
+            if (rings != null)
+                foreach (var r in rings)
+                    if (r != null) Destroy(r.gameObject);
+            rings = null;
+            if (ringMat != null) { Destroy(ringMat); ringMat = null; }
+        }
+
+        void ShowStop(bool on)
+        {
+            if (stopButton == null)
+            {
+                if (!on) return;
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                stopButton = BlackHoleUI.MakeButton(canvas.transform, "Merger Stop", "",
+                    new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(170f, 44f), Abort);
+            }
+            stopButton.gameObject.SetActive(on);
+            if (on)
+                stopButton.GetComponentInChildren<Text>().text =
+                    Loc.T("중단 ■", "Stop ■", "中止 ■", "停止 ■");
         }
 
         IEnumerator Run()
         {
             Running = true;
             if (controls != null) controls.SetImmersive(true);
+            ShowStop(true);
 
             // --- save the exploration state -------------------------------
-            float savedSpin = controller.spin;
-            float savedInner = controller.diskInnerRadius;
-            Vector3 savedScale = controller.transform.localScale;
+            savedSpin = controller.spin;
+            savedInner = controller.diskInnerRadius;
+            savedScale = controller.transform.localScale;
 
             controller.spin = 0f;                      // superposition path is Schwarzschild
             mTotal = primaryMass * (1f + massRatio);
@@ -163,8 +234,8 @@ namespace BlackHoleEffect
 
             // Gravitational waves: three expanding glowing rings rippling
             // outward through the disk plane.
-            var rings = new LineRenderer[3];
-            var ringMat = new Material(Shader.Find("BlackHole/PhotonTrail"));
+            rings = new LineRenderer[3];
+            ringMat = new Material(Shader.Find("BlackHole/PhotonTrail"));
             ringMat.SetColor("_Tint", new Color(1.2f, 1.6f, 2.6f, 1f));
             ringMat.SetFloat("_HeadBoost", 0f);
             ringMat.SetFloat("_TailFade", 0f);
@@ -222,8 +293,7 @@ namespace BlackHoleEffect
                 yield return null;
             }
             if (flash != null) flash.color = Color.clear;
-            for (int i = 0; i < 3; i++) Destroy(rings[i].gameObject);
-            Destroy(ringMat);
+            DestroyRings();
 
             // The remnant spins at a ≈ 0.69 — show it with the Kerr path.
             controller.SetSpin(0.69f);
@@ -254,9 +324,7 @@ namespace BlackHoleEffect
             controller.Apply();
             mat.SetFloat(BinaryOnId, 0f);
 
-            HideCaption();
-            if (controls != null) controls.SetImmersive(false);
-            Running = false;
+            Finish();
         }
 
         void StepOrbit(float dt)

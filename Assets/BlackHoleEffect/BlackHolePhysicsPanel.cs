@@ -51,28 +51,28 @@ namespace BlackHoleEffect
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInParent<Camera>());
 
             panel = BlackHoleUI.MakePanel(canvas.transform, "Physics Panel",
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -28f), new Vector2(400f, 348f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -28f), new Vector2(440f, 348f));
 
             title = BlackHoleUI.MakeText(panel, "Title", 22, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -14f), new Vector2(360f, 30f), FontStyle.Bold);
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -14f), new Vector2(400f, 30f), FontStyle.Bold);
 
             body = BlackHoleUI.MakeText(panel, "Body", 19, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -50f), new Vector2(360f, 150f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(20f, -50f), new Vector2(400f, 150f));
 
             // --- time-dilation comparison: two clocks, each clearly labelled.
             // All strings are assigned in RefreshText (runs every Update) so a
             // language toggle applies immediately.
             clockHeader = BlackHoleUI.MakeText(panel, "Clock Header", 14, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0f, 0f), new Vector2(0.5f, 0.5f), new Vector2(200f, 122f), new Vector2(360f, 18f));
+                new Vector2(0f, 0f), new Vector2(0.5f, 0.5f), new Vector2(220f, 122f), new Vector2(396f, 18f));
 
-            farHand = BuildClock("Observer Clock", new Vector2(110f, 78f));
-            probeHand = BuildClock("Probe Clock", new Vector2(285f, 78f));
+            farHand = BuildClock("Observer Clock", new Vector2(122f, 78f));
+            probeHand = BuildClock("Probe Clock", new Vector2(313f, 78f));
 
             farLabel = BlackHoleUI.MakeText(panel, "Observer Label", 15, BlackHoleUI.TextPrimary, TextAnchor.UpperCenter,
-                new Vector2(0f, 0f), new Vector2(0.5f, 1f), new Vector2(110f, 46f), new Vector2(170f, 40f));
+                new Vector2(0f, 0f), new Vector2(0.5f, 1f), new Vector2(122f, 46f), new Vector2(180f, 40f));
 
             probeLabel = BlackHoleUI.MakeText(panel, "Probe Label", 15, BlackHoleUI.TextPrimary, TextAnchor.UpperCenter,
-                new Vector2(0f, 0f), new Vector2(0.5f, 1f), new Vector2(285f, 46f), new Vector2(190f, 40f));
+                new Vector2(0f, 0f), new Vector2(0.5f, 1f), new Vector2(313f, 46f), new Vector2(200f, 40f));
 
             RefreshText();
         }
@@ -166,6 +166,30 @@ namespace BlackHoleEffect
             string mins = probeMinutes.ToString("0.0");
             string earthS = earthDiams.ToString("0.#");
 
+            // Dilation row. Near the hole BOTH clocks slow down, so the
+            // my-hour-vs-probe ratio approaches 1 as the camera descends —
+            // correct, but it reads as "less dilation". Anchor the row to a
+            // far-away hour instead whenever the camera is close enough to
+            // matter, so descending visibly slows YOUR clock too.
+            string dilRow = "";
+            if (showDilationRow)
+            {
+                string meMins = (60.0 * gObs).ToString("0.0");
+                string probeFarMins = (60.0 * gProbe).ToString("0.0");
+                bool nearHole = !float.IsInfinity(obsRs) && gObs < 0.995f;
+                dilRow = "\n<color=#9AA3B5>" + (nearHole
+                    ? Loc.T(
+                        "먼 우주 1시간 = 나 " + meMins + "분 · 탐사선 " + probeFarMins + "분",
+                        "1 h far away = me " + meMins + " min · probe " + probeFarMins + " min",
+                        "遠い宇宙の1時間 = 私 " + meMins + "分 · 探査機 " + probeFarMins + "分",
+                        "远方1小时 = 我 " + meMins + "分钟 · 探测器 " + probeFarMins + "分钟")
+                    : Loc.T(
+                        "내 시계 1시간 = 탐사선 " + mins + "분",
+                        "1 hour on my clock = " + mins + " min on the probe",
+                        "私の時計で1時間 = 探査機 " + mins + "分",
+                        "我的1小时 = 探测器 " + mins + "分钟")) + "</color>";
+            }
+
             title.text = Loc.T(massLabel, massLabelEn, massLabelJa, massLabelZh);
             body.text = Loc.T(
                 "질량        " + FormatMassCJK(massSolarMasses, "만", "억", " 태양질량") + "\n" +
@@ -173,32 +197,28 @@ namespace BlackHoleEffect
                 "그림자 지름 " + FormatKmCJK(shadowKm, "만")
                     + (earthDiams >= 1.0 ? "  (지구 " + earthS + "개)" : "") + "\n" +
                 "원반 온도   " + FormatTempCJK(diskTempK, "만", "억") + "   ·   ISCO 속도  광속의 50%"
-                + spinRow
-                + (showDilationRow ? "\n<color=#9AA3B5>내 시계 1시간 = 탐사선 " + mins + "분</color>" : ""),
+                + spinRow + dilRow,
 
                 "Mass          " + FormatMassEn(massSolarMasses) + "\n" +
                 "Horizon Rs   " + FormatKmEn(rsKm) + "\n" +
                 "Shadow dia.  " + FormatKmEn(shadowKm)
                     + (earthDiams >= 1.0 ? "  (" + earthS + " Earths)" : "") + "\n" +
                 "Disk temp    " + FormatTempKEn(diskTempK) + "   ·   ISCO speed  0.5 c"
-                + spinRow
-                + (showDilationRow ? "\n<color=#9AA3B5>1 hour on my clock = " + mins + " min on the probe</color>" : ""),
+                + spinRow + dilRow,
 
                 "質量        " + FormatMassCJK(massSolarMasses, "万", "億", " 太陽質量") + "\n" +
                 "地平面 Rs   " + FormatKmCJK(rsKm, "万") + "\n" +
                 "影の直径    " + FormatKmCJK(shadowKm, "万")
                     + (earthDiams >= 1.0 ? "  (地球 " + earthS + "個分)" : "") + "\n" +
                 "円盤温度    " + FormatTempCJK(diskTempK, "万", "億") + "   ·   ISCO速度  光速の50%"
-                + spinRow
-                + (showDilationRow ? "\n<color=#9AA3B5>私の時計で1時間 = 探査機 " + mins + "分</color>" : ""),
+                + spinRow + dilRow,
 
                 "质量        " + FormatMassCJK(massSolarMasses, "万", "亿", " 太阳质量") + "\n" +
                 "视界 Rs     " + FormatKmCJK(rsKm, "万") + "\n" +
                 "阴影直径    " + FormatKmCJK(shadowKm, "万")
                     + (earthDiams >= 1.0 ? "  (地球 " + earthS + "个)" : "") + "\n" +
                 "盘温度      " + FormatTempCJK(diskTempK, "万", "亿") + "   ·   ISCO速度  光速的50%"
-                + spinRow
-                + (showDilationRow ? "\n<color=#9AA3B5>我的1小时 = 探测器 " + mins + "分钟</color>" : ""));
+                + spinRow + dilRow);
 
             if (clockHeader != null)
                 clockHeader.text = Loc.T("— 같은 시간, 서로 다른 시계 —", "— same time, different clocks —",
