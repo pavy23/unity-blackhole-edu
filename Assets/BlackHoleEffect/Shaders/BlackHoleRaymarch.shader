@@ -189,13 +189,15 @@ Shader "BlackHole/RaymarchedBlackHole"
 
                 // Keplerian differential rotation shears the noise into
                 // streaks; +ωt so the pattern moves along the same direction
-                // as the Doppler velocity (+cross(ŷ, r̂)).
+                // as the Doppler velocity (+cross(ŷ, r̂)). The sheared angle
+                // is embedded on a circle so the noise is periodic in angle —
+                // no visible seam at ang = ±π.
                 float ang = atan2(hp.z, hp.x);
                 float omega = 4.2 * _FlowSpeed / pow(rSim, 1.5);
-                float phase = ang + _Time.y * omega;
-                float2 nuv = float2(log2(rSim) * _DiskDetail,
-                                    (phase + log2(rSim) * 1.2) * 1.4);
-                float n = bh_fbm2(nuv);
+                // Angle stays unscaled (period 2π); the circle RADIUS sets the
+                // angular feature density instead.
+                float theta = ang + _Time.y * omega + log2(rSim) * 1.2;
+                float n = bh_fbm3(float3(cos(theta) * 1.4, sin(theta) * 1.4, log2(rSim) * _DiskDetail));
                 float streak = lerp(1.0 - _DiskContrast, 1.0 + 1.6 * _DiskContrast, n);
                 density *= streak;
 
@@ -226,9 +228,10 @@ Shader "BlackHole/RaymarchedBlackHole"
                 float vertical = exp(-(ay * ay) / (H * H * 0.25));
                 float radial = exp(-2.8 * x) * smoothstep(0.0, 0.1, x);
 
+                // Circle-embedded angle: periodic, no seam at ang = ±π.
                 float ang = atan2(p.z, p.x);
                 float phase = ang + _Time.y * 4.2 * _FlowSpeed / pow(max(rSim, 3.0), 1.5);
-                float n = bh_vnoise2(float2(log2(max(rSim, 1.0)) * 3.2, phase * 1.6));
+                float n = bh_vnoise3(float3(cos(phase) * 1.6, sin(phase) * 1.6, log2(max(rSim, 1.0)) * 3.2));
 
                 float dens = _HazeStrength * 0.22 * vertical * radial * (0.45 + 0.8 * n);
                 if (dens <= 0.0005) return;

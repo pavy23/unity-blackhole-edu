@@ -107,14 +107,10 @@ namespace BlackHoleEffect
         public float zoomFactor = 0.86f;
         public Vector2 pitchLimits = new Vector2(-2f, 70f);
         public Vector2 distanceLimits = new Vector2(3.2f, 40f);
-        [Tooltip("Seconds of no mouse/zoom input before the cinematic auto-orbit resumes from the current view.")]
-        public float autoOrbitResumeDelay = 7f;
 
         float yaw, pitch, distance;
-        float lastManualTime;
         Vector3 initialPos;
         Quaternion initialRot;
-        bool manualControl;
         UnityEngine.UI.Text help;
         GameObject helpBar;
         bool showHelp = true;
@@ -170,16 +166,6 @@ namespace BlackHoleEffect
             ReadHotkeys();
             ReadMouse();
             if (helpBar != null) helpBar.SetActive(showHelp && (tour == null || !tour.Running));
-
-            // Resume the cinematic auto-orbit after a few idle seconds, from
-            // wherever the user parked the camera (no snap — CinematicOrbit
-            // re-baselines on enable).
-            if (manualControl && !suspendCamera && autoOrbit != null && !autoOrbit.enabled
-                && Time.time - lastManualTime > autoOrbitResumeDelay)
-            {
-                manualControl = false;
-                autoOrbit.enabled = true;
-            }
         }
 
         void ReadMouse()
@@ -215,13 +201,11 @@ namespace BlackHoleEffect
             bool zooming = !Mathf.Approximately(scroll, 0f) || zoomIn || zoomOut;
             if (!dragging && !zooming) return;
 
-            lastManualTime = Time.time;
-            if (!manualControl)
-            {
-                manualControl = true;
-                if (autoOrbit != null) autoOrbit.enabled = false;
-                SyncFromTransform();
-            }
+            // The cinematic orbit is never paused: each input frame re-syncs
+            // from the transform (which the orbit advanced last LateUpdate)
+            // and layers the user's deltas on top — the view keeps drifting
+            // even while dragging.
+            SyncFromTransform();
 
             if (dragging)
             {
@@ -369,7 +353,6 @@ namespace BlackHoleEffect
         {
             transform.position = initialPos;
             transform.rotation = initialRot;
-            manualControl = false;
             if (autoOrbit != null) autoOrbit.enabled = true;
         }
 

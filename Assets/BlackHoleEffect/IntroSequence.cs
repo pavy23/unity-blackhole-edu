@@ -229,6 +229,7 @@ namespace BlackHoleEffect
                     new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(860f, 110f));
                 caption = BlackHoleUI.MakeText(captionPanel, "Text", 22, BlackHoleUI.TextPrimary, TextAnchor.MiddleCenter,
                     new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(820f, 90f));
+                caption.horizontalOverflow = HorizontalWrapMode.Wrap; // long lines stay inside the panel
             }
             captionPanel.gameObject.SetActive(true);
             caption.text = text;

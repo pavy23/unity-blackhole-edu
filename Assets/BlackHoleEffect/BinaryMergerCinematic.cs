@@ -170,6 +170,17 @@ namespace BlackHoleEffect
                 if (flash != null)
                     flash.color = new Color(0.85f, 0.9f, 1f, 0.8f * Mathf.Clamp01(1f - t / 0.4f));
 
+                // Camera-facing wavefronts: gravitational waves radiate in
+                // every direction, so the rings are drawn as the spherical
+                // wavefront's cross-section toward the viewer (also keeps
+                // them from being half-hidden behind the opaque hole quad).
+                var gwCam = Camera.main;
+                Vector3 toCam = gwCam != null ? (gwCam.transform.position - center).normalized : Vector3.up;
+                Vector3 upRef = Mathf.Abs(toCam.y) > 0.98f ? Vector3.right : Vector3.up;
+                Vector3 axR = Vector3.Cross(upRef, toCam).normalized;
+                Vector3 axU = Vector3.Cross(toCam, axR);
+                Vector3 lift = toCam * (1.1f * controller.transform.localScale.x);
+
                 for (int i = 0; i < 3; i++)
                 {
                     float ts = t - i * 0.6f;
@@ -182,7 +193,8 @@ namespace BlackHoleEffect
                     for (int sgm = 0; sgm < RingSegs; sgm++)
                     {
                         float angR = sgm / (float)RingSegs * Mathf.PI * 2f;
-                        rings[i].SetPosition(sgm, center + new Vector3(Mathf.Cos(angR) * radius, 0f, Mathf.Sin(angR) * radius));
+                        rings[i].SetPosition(sgm,
+                            center + (axR * Mathf.Cos(angR) + axU * Mathf.Sin(angR)) * radius + lift);
                     }
                 }
                 yield return null;
@@ -290,6 +302,7 @@ namespace BlackHoleEffect
                     new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(900f, 110f));
                 caption = BlackHoleUI.MakeText(captionPanel, "Text", 21, BlackHoleUI.TextPrimary, TextAnchor.MiddleCenter,
                     new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(860f, 94f));
+                caption.horizontalOverflow = HorizontalWrapMode.Wrap;
             }
             captionPanel.gameObject.SetActive(true);
             caption.text = Loc.T(Lines[i], LinesEn[i]);
