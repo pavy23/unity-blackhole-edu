@@ -29,6 +29,8 @@ namespace BlackHoleEffect
         Quaternion savedRot;
         Image skyImage;
         Texture2D skyTex;
+        float savedStarDensity, savedNebula;
+        BlackHoleController holeController;
 
         public void Begin()
         {
@@ -64,6 +66,12 @@ namespace BlackHoleEffect
         {
             HideCaption();
             ShowStop(false);
+            if (holeController != null)
+            {
+                holeController.starDensity = savedStarDensity;
+                holeController.nebulaHaze = savedNebula;
+                holeController.Apply();
+            }
             if (controls != null) { controls.SetImmersive(false); controls.suspendCamera = false; }
             if (orbit != null) orbit.enabled = true; // the drift never stays off
             IsFalling = false;
@@ -105,6 +113,19 @@ namespace BlackHoleEffect
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
 
+            // Densify the background sky for the duration of the fall: past
+            // r ≈ 3 the only light left is the star cone behind us, and at
+            // the exploration density it reads as a black screen.
+            holeController = hole.GetComponent<BlackHoleController>();
+            if (holeController != null)
+            {
+                savedStarDensity = holeController.starDensity;
+                savedNebula = holeController.nebulaHaze;
+                holeController.starDensity = 0.55f;
+                holeController.nebulaHaze = 0.35f;
+                holeController.Apply();
+            }
+
             savedPos = transform.position;
             savedRot = transform.rotation;
             float rs = hole.lossyScale.x;
@@ -140,23 +161,26 @@ namespace BlackHoleEffect
                 "円盤が空を覆いはじめます。外の時間はどんどん速く見えます。",
                 "吸积盘开始遮蔽天空。外面的时间看起来越来越快。") + RLine(r));
 
+            // From here the shadow outgrows the field of view fast, so the
+            // camera tilts up to keep the shrinking bright rim on screen —
+            // exactly what the caption describes.
             len = Narrate(3);
             yield return Glide(4.5f, 1.9f, Mathf.Max(3.8f, len + 0.3f), 1f, dir, rs, r => Loc.T(
                 "조석력이 몸을 잡아 늘입니다. 그림자가 시야의 절반을 삼켰습니다.",
                 "Tidal forces stretch your body. The shadow has swallowed half your view.",
                 "潮汐力が体を引き伸ばします。影が視界の半分を呑み込みました。",
-                "潮汐力开始拉伸你的身体。阴影已吞没一半视野。") + RLine(r));
+                "潮汐力开始拉伸你的身体。阴影已吞没一半视野。") + RLine(r), 0f, 35f);
 
-            // The camera tilts upward here: the caption says the last light
-            // closes in OVERHEAD, so we look up and actually show it instead
-            // of staring into an already-black hole for six seconds.
+            // Below r ≈ 3 the only light left is the (boosted) starfield in
+            // the shrinking cone behind us — keep sweeping backward so stars
+            // stay in frame instead of staring into pure shadow.
             len = Narrate(4);
             yield return Glide(1.9f, 1.05f, Mathf.Max(3.2f, len + 0.3f), 0.9f, dir, rs, r => Loc.T(
                 "마지막 빛의 고리가 머리 위로 좁혀듭니다.",
                 "The last ring of light closes in overhead.",
                 "最後の光のリングが頭上で狭まっていきます。",
-                "最后的光环在头顶收拢。") + RLine(r), 0f, 40f);
-            yield return new WaitForSeconds(1.6f); // hold at the brink
+                "最后的光环在头顶收拢。") + RLine(r), 35f, 85f);
+            yield return new WaitForSeconds(0.6f); // brief hold at the brink
 
             len = Narrate(5);
             Caption(Loc.T(
@@ -164,11 +188,13 @@ namespace BlackHoleEffect
                 "We have crossed the event horizon.\nNo signal can ever reach the outside universe again.",
                 "事象の地平面を通過しました。\n外の宇宙へは、もうどんな信号も送れません。",
                 "我们已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
-            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 40f, 60f);
+            // Turn almost fully backward: the last stars compress and wink
+            // out right as we cross — the true black lands ON the caption.
+            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 85f, 150f);
             // A short beat of true darkness — then the looking-back circle
             // rises while the horizon line finishes, so pure black never
             // outstays its welcome.
-            yield return new WaitForSeconds(2.4f);
+            yield return new WaitForSeconds(1.8f);
             EnsureSkyImage();
             skyImage.gameObject.SetActive(true);
             for (float t = 0f; t < 1.1f; t += Time.deltaTime)
@@ -179,7 +205,7 @@ namespace BlackHoleEffect
                 skyImage.color = new Color(1f, 0.98f, 0.92f, k);
                 yield return null;
             }
-            yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 2.4f - 1.1f));
+            yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 1.8f - 1.1f));
 
             // --- Epilogue: turn around. The view "forward" (toward the
             // singularity) really is black — but looking back, the outside
