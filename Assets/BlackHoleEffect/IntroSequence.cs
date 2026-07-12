@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// Birth-of-a-black-hole intro (F5): a star burns, swells into a red
+    /// Birth-of-a-black-hole intro (F2): a star burns, swells into a red
     /// giant, shudders, collapses, detonates as a supernova (flash + double
     /// shock shell), and the black hole fades in where the star used to be.
     /// Narrated — each phase waits for its narration clip, so captions and
@@ -16,9 +16,6 @@ namespace BlackHoleEffect
         public Renderer holeRenderer;
         public BlackHoleController controller;
         public DesktopControls controls;
-
-        [Tooltip("Play the birth-of-a-black-hole intro automatically when play mode starts (once per session; F2 replays it). The startup language picker runs first.")]
-        public bool autoPlayOnStart = true;
 
         public bool IsPlaying { get; private set; }
 
@@ -70,30 +67,18 @@ namespace BlackHoleEffect
 
         void Start()
         {
-            if (autoPlayOnStart && Application.isPlaying)
-                StartCoroutine(AutoPlay());
+            // Language picker only — the intro itself stays on F2 so the
+            // user starts in free exploration, not in a cinematic.
+            if (Application.isPlaying)
+                StartCoroutine(ShowLanguagePicker());
         }
 
-        IEnumerator AutoPlay()
+        IEnumerator ShowLanguagePicker()
         {
-            // A short beat so the scene (canvas, narration, audio) settles in.
+            // A short beat so the scene (canvas, audio) settles in.
             yield return new WaitForSeconds(0.5f);
             if (controls != null && controls.CinematicBusy) yield break;
-
-            // Language first — the intro narration speaks whatever is chosen.
-            bool chosen = false;
-            LanguageSelect.Show(() => chosen = true);
-            while (!chosen)
-            {
-                // If the user launched an experience via hotkey instead of
-                // picking, stop waiting and never hijack it.
-                if (controls != null && controls.CinematicBusy) yield break;
-                yield return null;
-            }
-
-            yield return new WaitForSeconds(0.4f);
-            if (controls != null && controls.CinematicBusy) yield break;
-            Play();
+            LanguageSelect.Show(null);
         }
 
         void Update()

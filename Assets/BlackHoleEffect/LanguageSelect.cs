@@ -4,10 +4,10 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// First-launch language picker: shown once before the intro cinematic,
-    /// centered over the live scene. Picking a language sets Loc, refreshes
-    /// every visible overlay, and hands control back to the caller (which
-    /// then starts the intro). K still cycles languages any time later.
+    /// First-launch language picker, centered over the live scene. Picking a
+    /// language sets Loc and refreshes every visible overlay; the app then
+    /// stays in free exploration (experiences start from F1–F4).
+    /// K still cycles languages any time later.
     /// </summary>
     public static class LanguageSelect
     {
