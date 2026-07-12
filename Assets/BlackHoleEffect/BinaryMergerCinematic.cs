@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// Binary black-hole merger cinematic (F7) — the GW150914 story.
+    /// Binary black-hole merger cinematic (F4) — the GW150914 story.
     /// Two lensing centers (superposed-deflection shader path) inspiral on a
     /// Peters-equation orbit a(t) = a_f + (a_0 − a_f)(1 − t/T)^{1/4} while a
     /// procedurally synthesized gravitational-wave chirp tracks 2× the actual
@@ -78,6 +78,9 @@ namespace BlackHoleEffect
 
         // Exploration state saved by Run, restored on finish OR abort.
         float savedSpin, savedInner;
+        float savedBrightness, savedStar, savedNebula;
+        Material sky;                          // RenderSettings.skybox — kept in sync with the quad's star density
+        float savedSkyStar, savedSkyNebula;
         Vector3 savedScale;
         LineRenderer[] rings;
         Material ringMat;
@@ -128,7 +131,11 @@ namespace BlackHoleEffect
             controller.transform.localScale = savedScale;
             controller.spin = savedSpin;
             controller.diskInnerRadius = savedInner;
+            controller.diskBrightness = savedBrightness;
+            controller.starDensity = savedStar;
+            controller.nebulaHaze = savedNebula;
             controller.Apply();
+            RestoreSky();
             if (mat != null) mat.SetFloat(BinaryOnId, 0f);
             Finish();
         }
@@ -139,6 +146,15 @@ namespace BlackHoleEffect
             ShowStop(false);
             if (controls != null) controls.SetImmersive(false);
             Running = false;
+        }
+
+        void RestoreSky()
+        {
+            if (sky != null && sky.HasProperty("_StarDensity"))
+            {
+                sky.SetFloat("_StarDensity", savedSkyStar);
+                sky.SetFloat("_NebulaIntensity", savedSkyNebula);
+            }
         }
 
         void DestroyRings()
@@ -175,15 +191,32 @@ namespace BlackHoleEffect
             savedSpin = controller.spin;
             savedInner = controller.diskInnerRadius;
             savedScale = controller.transform.localScale;
+            savedBrightness = controller.diskBrightness;
+            savedStar = controller.starDensity;
+            savedNebula = controller.nebulaHaze;
+            // The skybox (behind the raymarch quad) has its OWN star density;
+            // the quad's starfield is drawn to match it. When we enrich the
+            // quad's field for the gas-free lensing we must enrich the skybox
+            // by the SAME amount, or the quad's rectangle shows as a brighter
+            // square patch when zoomed out.
+            sky = RenderSettings.skybox;
+            if (sky != null && sky.HasProperty("_StarDensity"))
+            {
+                savedSkyStar = sky.GetFloat("_StarDensity");
+                savedSkyNebula = sky.GetFloat("_NebulaIntensity");
+            }
 
             controller.spin = 0f;                      // superposition path is Schwarzschild
             mTotal = primaryMass * (1f + massRatio);
             separation = startSeparation;
             theta = 0f;
 
-            // The binary carves a cavity in the disk: push the inner edge out.
-            // (Stylized — a real circumbinary cavity sits at ~2a, beyond the
-            // visible disk; the holes stay safely inside this one.)
+            // GW150914 was gas-free (no accretion disk — no electromagnetic
+            // counterpart). The disk disperses over the first ~1.8 s of the
+            // inspiral, leaving two BARE black holes that lens the starfield as
+            // they spiral together — two clearly distinct objects merging,
+            // which is both the accurate picture and the intuitive one. The
+            // starfield is enriched so the lensing reads clearly.
             controller.diskInnerRadius = 6f;
             controller.Apply();
             mat.SetFloat(Hole1MassId, primaryMass);
@@ -192,6 +225,7 @@ namespace BlackHoleEffect
 
             EnsureChirp();
             chirpSource.Play();
+            EnsureFlash();   // created up front so it can swell during the final approach
 
             // --- Phase 1: slow inspiral while the story is told -----------
             Caption(0);
@@ -213,9 +247,36 @@ namespace BlackHoleEffect
                     NarrationManager.Instance.Play("binary_1");
                     narrated2 = true;
                 }
+                // Disperse the gas: fade the disk (and its minidisks) out over
+                // the first 1.8 s and enrich the starfield so the two bare holes
+                // lens it clearly. The skybox is enriched by the SAME amount so
+                // the quad never shows as a brighter square patch.
+                float g = Mathf.Clamp01(t / 1.8f);
+                controller.diskBrightness = savedBrightness * (1f - g);
+                controller.starDensity = Mathf.Lerp(savedStar, 0.42f, g);
+                controller.nebulaHaze = Mathf.Lerp(savedNebula, 0.28f, g);
+                controller.Apply();
+                if (sky != null && sky.HasProperty("_StarDensity"))
+                {
+                    sky.SetFloat("_StarDensity", controller.starDensity);
+                    sky.SetFloat("_NebulaIntensity", controller.nebulaHaze);
+                }
+
                 float u = Mathf.Clamp01(t / T);
                 separation = mergeSep + (startSeparation - mergeSep) * Mathf.Pow(1f - u, 0.25f);
                 StepOrbit(Time.deltaTime);
+
+                // Pre-merger flash swell: over the last 0.3 s of the inspiral
+                // the flash brightens to fully opaque, so the fast, tight final
+                // approach — the smallest pre-merger moment — is already hidden
+                // BEFORE the flip. The view never lingers on the small size; it
+                // goes straight to the flash and then the final remnant. (Keyed
+                // to time, not separation: the Peters decay makes separation
+                // collapse sub-frame at the very end.)
+                if (flash != null)
+                    flash.color = new Color(0.9f, 0.94f, 1f,
+                        Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(T - 0.3f, T, t)));
+
                 if (separation <= mergeSep * 1.01f) break;
                 yield return null;
             }
@@ -224,19 +285,25 @@ namespace BlackHoleEffect
             ringdown = true;                            // chirp → damped ringdown tone
             mat.SetFloat(BinaryOnId, 0f);
 
-            Caption(2);
-            float len2 = NarrationManager.Instance.Play("binary_2");
-            EnsureFlash();
-
-            // Final hole: 95% of the total mass (5% radiated), spin ≈ 0.69.
+            // The remnant is its FINAL size from the moment of merging — a
+            // merged black hole does not inflate afterwards. The apparent
+            // shadow jump (two-hole contact blob → single remnant) happens in
+            // the one frame the fully-opaque flash covers, so no growth is ever
+            // seen. finalMass = 95% of the total (5% radiated as GW); spin
+            // settles to ≈0.69 (the measured GW150914 remnant).
             float finalMass = 0.95f * mTotal;
             Vector3 finalScale = savedScale * finalMass;
+            controller.transform.localScale = finalScale;
 
-            // Gravitational waves: five expanding wavefronts, each deformed
-            // by the actual + polarization pattern of a merger — radius ∝
-            // 1 + ε·cos(2φ − ψ) with the quadrupole pattern rotating on,
-            // thinning out as they expand (wave amplitude falls as 1/r).
-            rings = new LineRenderer[5];
+            Caption(2);
+            float len2 = NarrationManager.Instance.Play("binary_2");
+
+            // Gravitational waves: expanding wavefronts, each deformed by the
+            // + polarization pattern of a merger — radius ∝ 1 + ε·cos(2φ − ψ)
+            // with the quadrupole pattern rotating on, thinning as they expand.
+            // 8 fronts at a short launch interval (below) so they read as a
+            // continuous wave train instead of a few discrete rings popping in.
+            rings = new LineRenderer[8];
             ringMat = new Material(Shader.Find("BlackHole/PhotonTrail"));
             ringMat.SetColor("_Tint", new Color(1.5f, 2.0f, 3.3f, 1f));
             ringMat.SetFloat("_HeadBoost", 0f);
@@ -260,13 +327,26 @@ namespace BlackHoleEffect
             }
 
             float mergeDur = Mathf.Max(4.5f, len2 + 0.5f);
+            const float spinRampDur = 1.6f;  // settle into the Kerr remnant
             Vector3 center = controller.transform.position;
+            // Scale is already at finalScale (set above) and never changes here.
             for (float t = 0f; t < mergeDur; t += Time.deltaTime)
             {
-                float k = Mathf.Clamp01(t / 0.7f);
-                controller.transform.localScale = Vector3.Lerp(savedScale, finalScale, Mathf.SmoothStep(0f, 1f, k));
+                // Ramp the spin up (Schwarzschild → Kerr a≈0.69) once the flash
+                // has revealed the remnant, so the shadow shape settles
+                // continuously instead of snapping. This is a shape change, not
+                // a size change — the hole never appears to grow.
+                if (t > 0.55f)
+                    controller.SetSpin(Mathf.SmoothStep(0f, 0.69f, Mathf.Clamp01((t - 0.55f) / spinRampDur)));
+
                 if (flash != null)
-                    flash.color = new Color(0.85f, 0.9f, 1f, 0.8f * Mathf.Clamp01(1f - t / 0.4f));
+                    // Merger flash: fully opaque for the flip frame so the
+                    // topology change AND the fast pre-merger orbital motion are
+                    // completely hidden (no "cut"), then eases out (smoothstep,
+                    // not a linear ramp) so the reveal is gradual rather than a
+                    // hard wipe.
+                    flash.color = new Color(0.9f, 0.94f, 1f,
+                        Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((0.55f - t) / 0.5f)));
 
                 // Camera-facing wavefronts: gravitational waves radiate in
                 // every direction, so the rings are drawn as the spherical
@@ -284,12 +364,14 @@ namespace BlackHoleEffect
                 float psi = t * 5.2f;
                 for (int i = 0; i < rings.Length; i++)
                 {
-                    float ts = t - i * 0.45f;
+                    float ts = t - i * 0.28f;
                     float ks = Mathf.Clamp01(ts / 3.6f);
                     if (ts < 0f || ks >= 1f) { rings[i].startColor = rings[i].endColor = Color.clear; continue; }
                     float radius = Mathf.Lerp(1.3f, 26f, Mathf.Pow(ks, 0.85f)) * savedScale.x;
                     float eps = 0.11f * (1f - ks);              // deformation dies down
-                    float fade = Mathf.Pow(1f - ks, 1.7f);
+                    // Fade each front IN over the first sliver of its life (no
+                    // pop at launch) and back out as it expands.
+                    float fade = Mathf.Pow(1f - ks, 1.7f) * Mathf.SmoothStep(0f, 0.1f, ks);
                     rings[i].widthMultiplier = Mathf.Lerp(0.5f, 0.1f, ks) * savedScale.x;
                     rings[i].startColor = rings[i].endColor = new Color(1f, 1f, 1f, fade);
                     for (int sgm = 0; sgm < RingSegs; sgm++)
@@ -305,18 +387,28 @@ namespace BlackHoleEffect
             if (flash != null) flash.color = Color.clear;
             DestroyRings();
 
-            // The remnant spins at a ≈ 0.69 — show it with the Kerr path.
+            // Spin already ramped to ≈0.69 during the ringdown loop; pin the
+            // exact value in case the loop ended a hair early.
             controller.SetSpin(0.69f);
 
-            // --- Aftermath: gas refills the cavity -------------------------
+            // --- Aftermath: return to the explorable state — a disk settles
+            // back in around the spinning remnant while the starfield relaxes.
             Caption(3);
             float len3 = NarrationManager.Instance.Play("binary_3");
             float after = Mathf.Max(8f, len3 + 1f);
-            float innerFrom = controller.diskInnerRadius;
+            controller.diskInnerRadius = savedInner;
             for (float t = 0f; t < after; t += Time.deltaTime)
             {
-                controller.diskInnerRadius = Mathf.Lerp(innerFrom, savedInner, Mathf.SmoothStep(0f, 1f, t / after));
+                float g = Mathf.SmoothStep(0f, 1f, t / after);
+                controller.diskBrightness = savedBrightness * g;
+                controller.starDensity = Mathf.Lerp(0.42f, savedStar, g);
+                controller.nebulaHaze = Mathf.Lerp(0.28f, savedNebula, g);
                 controller.Apply();
+                if (sky != null && sky.HasProperty("_StarDensity"))
+                {
+                    sky.SetFloat("_StarDensity", controller.starDensity);
+                    sky.SetFloat("_NebulaIntensity", controller.nebulaHaze);
+                }
                 yield return null;
             }
 
@@ -331,7 +423,11 @@ namespace BlackHoleEffect
             controller.transform.localScale = savedScale;
             controller.spin = savedSpin;
             controller.diskInnerRadius = savedInner;
+            controller.diskBrightness = savedBrightness;
+            controller.starDensity = savedStar;
+            controller.nebulaHaze = savedNebula;
             controller.Apply();
+            RestoreSky();
             mat.SetFloat(BinaryOnId, 0f);
 
             Finish();

@@ -197,8 +197,8 @@ namespace BlackHoleEffect
                                "理論背景 — " + c.titleJa, "理论背景 — " + c.titleZh);
             formula.text = Loc.NonKorean && c.formulaEn != null ? c.formulaEn : c.formula;
             body.text = Loc.T(c.body, c.bodyEn, c.bodyJa, c.bodyZh);
-            if (hint != null) hint.text = Loc.T("X 닫기 · F2 난이도", "X close · F2 level",
-                                                "X 閉じる · F2 難易度", "X 关闭 · F2 难度");
+            if (hint != null) hint.text = Loc.T("X 닫기 · C 난이도", "X close · C level",
+                                                "X 閉じる · C 難易度", "X 关闭 · C 难度");
         }
 
         int ContextKey()
@@ -233,8 +233,8 @@ namespace BlackHoleEffect
 
             hint = BlackHoleUI.MakeText(panel, "Hint", 12, BlackHoleUI.TextSecondary, TextAnchor.LowerRight,
                 new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-16f, 8f), new Vector2(200f, 16f));
-            hint.text = Loc.T("X 닫기 · F2 난이도", "X close · F2 level",
-                              "X 閉じる · F2 難易度", "X 关闭 · F2 难度");
+            hint.text = Loc.T("X 닫기 · C 난이도", "X close · C level",
+                              "X 閉じる · C 難易度", "X 关闭 · C 难度");
         }
     }
 }

@@ -15,11 +15,11 @@ color come from relativistic shifts: Doppler beaming, gravitational redshift, an
   Shakura–Sunyaev thin-disk temperature *T ∝ r^(−3/4)*, Planckian-locus blackbody colors
 - **Kerr (spinning) black hole** — Kerr–Schild coordinate Hamiltonian integration: D-shaped shadow,
   frame dragging, disk inner edge tracking the prograde ISCO(a) (key 3, presets 0 → 0.998)
-- **Binary black hole merger** — the GW150914 story (F4): two lensing centers inspiraling on a
-  Peters-equation orbit inside a circumbinary-disk cavity, each carrying a **tidally truncated
-  minidisk** of its own, gravitational-wave chirp audio synced to the actual orbital frequency,
+- **Binary black hole merger** — the GW150914 story (F4): the disk disperses to leave **two bare
+  black holes lensing the starfield** as they inspiral on a Peters-equation orbit — gas-free, as
+  GW150914 itself was — with gravitational-wave chirp audio synced to the actual orbital frequency,
   merger flash, quadrupole-deformed wavefronts, ringdown, and a Kerr remnant with 95% of the total
-  mass and spin a ≈ 0.69
+  mass and spin a ≈ 0.69 (a disk settles back around the remnant afterwards)
 - **Experiences** — 11-step narrated guided tour (F1), star-collapse birth intro (F2), fully narrated
   first-person fall-in with a physically honest inside-the-horizon ending (F3)
 - **Educational toggles** — photon trajectory launcher (Space), Einstein ring (E), spaghettification
@@ -69,12 +69,12 @@ Being honest about what is *not* rigorous:
   would look frozen); mass presets change the numbers correctly but the visual scale ratios are
   stylized so everything stays on screen.
 - **Binary lensing is a superposition** of two Schwarzschild deflections. No analytic two-black-hole
-  metric exists; the last orbits really require numerical relativity. The gas picture follows the
-  standard simulation morphology — circumbinary disk + cavity + per-hole minidisks (truncated at
-  ~0.35 of the separation) — but uses the same stylized thin-disk model, with no accretion streams
-  between the components. Ringdown audio is a damped sine, not the quasi-normal-mode spectrum. GW
-  "rings" visualize invisible strain. (GW150914 itself was almost certainly gas-free — no
-  electromagnetic counterpart was observed; the gas is there to make the dynamics visible.)
+  metric exists; the last orbits really require numerical relativity. The merger is shown **gas-free**
+  — two bare black holes lensing the starfield — matching GW150914, which had no electromagnetic
+  counterpart; the exploration disk disperses at the start and settles back around the remnant. (A
+  gas-rich circumbinary-disk + cavity + per-hole-minidisk path also exists in the shader but is not
+  used in this cinematic.) Ringdown audio is a damped sine, not the quasi-normal-mode spectrum. GW
+  "rings" visualize invisible strain.
 - **No radiative transfer.** Disk brightness/opacity profiles, turbulence noise and the bright
   "knots" are procedural art shaped by the physics (Keplerian shear), not MHD simulation output.
   Bloom and exposure are tuned for legibility.

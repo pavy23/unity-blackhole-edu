@@ -5,7 +5,7 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// First-person fall into the event horizon (F6): the camera free-falls
+    /// First-person fall into the event horizon (F3): the camera free-falls
     /// toward the hole while the shadow swells to fill the sky. Looking
     /// forward everything ends black — but the epilogue turns the view
     /// around: the outside universe stays visible, gathered into an
@@ -28,9 +28,12 @@ namespace BlackHoleEffect
         Vector3 savedPos;
         Quaternion savedRot;
         Image skyImage;
+        Image blackOverlay;
         Texture2D skyTex;
         float savedStarDensity, savedNebula;
         BlackHoleController holeController;
+        float spiralAz;   // cumulative background drift, deg (matches the ambient orbit)
+        float driftRate;  // deg/s — set from the ambient CinematicOrbit so the fall is unified with it
 
         public void Begin()
         {
@@ -66,6 +69,13 @@ namespace BlackHoleEffect
         {
             HideCaption();
             ShowStop(false);
+            // Never leave the screen black — a normal end or an Esc-abort both
+            // route through here, including an abort mid-plunge.
+            if (blackOverlay != null)
+            {
+                var bc = blackOverlay.color; bc.a = 0f; blackOverlay.color = bc;
+                blackOverlay.gameObject.SetActive(false);
+            }
             if (holeController != null)
             {
                 holeController.starDensity = savedStarDensity;
@@ -88,22 +98,86 @@ namespace BlackHoleEffect
 
         /// <summary>tiltFrom/tiltTo: upward camera pitch in degrees — near the
         /// horizon the only remaining light is overhead, so looking straight
-        /// at the hole would show nothing but black for many seconds.</summary>
+        /// at the hole would show nothing but black for many seconds.
+        /// onFrame: per-frame hook (r) for the black overlay fade. The
+        /// background drift is a constant-rate azimuthal sweep (spiralAz,
+        /// driftRate) shared across every stage so it matches the ambient orbit
+        /// exactly — the direction-sampled sky only moves when the view
+        /// rotates, so this keeps it alive without ever feeling faster than the
+        /// exploration/merger views.</summary>
         IEnumerator Glide(float rFrom, float rTo, float dur, float ease,
                           Vector3 dir, float rs, System.Func<float, string> captionFor,
-                          float tiltFrom = 0f, float tiltTo = 0f)
+                          float tiltFrom = 0f, float tiltTo = 0f, System.Action<float> onFrame = null)
         {
             for (float t = 0f; t < dur; t += Time.deltaTime)
             {
                 float u = Mathf.Clamp01(t / dur);
                 float r = Mathf.Lerp(rFrom, rTo, Mathf.Pow(u, ease));
-                transform.position = hole.position + dir * (r * rs);
+                // Constant-rate drift about world-up, accumulated across all
+                // stages. AngleAxis preserves |dir|, so the camera stays at
+                // radius r*rs and the quad/leak geometry is untouched; applied
+                // BEFORE LookAt so the hole stays centered.
+                spiralAz += driftRate * Time.deltaTime;
+                Vector3 dirNow = Quaternion.AngleAxis(spiralAz, Vector3.up) * dir;
+                transform.position = hole.position + dirNow * (r * rs);
                 transform.LookAt(hole.position);
                 float tilt = Mathf.Lerp(tiltFrom, tiltTo, Mathf.SmoothStep(0f, 1f, u));
+                tilt = Mathf.Min(tilt, SafeTiltCap(r)); // never let the frame run off the quad rim
                 if (tilt != 0f) transform.Rotate(-tilt, 0f, 0f);
+                UpdateStarDensity(r);
                 if (captionFor != null) Caption(captionFor(r));
+                onFrame?.Invoke(r);
                 yield return null;
             }
+        }
+
+        /// <summary>Star/nebula density ramps up only with DEPTH, not from the
+        /// first frame: at the start (r ≥ 8) it matches the exploration view;
+        /// past r ≈ 3 the shadow fills the sky and the only light left is the
+        /// star cone behind, so the boost fades in to keep that from reading as
+        /// a black screen.</summary>
+        void UpdateStarDensity(float r)
+        {
+            if (holeController == null) return;
+            float k = Mathf.InverseLerp(8f, 2f, r); // 0 at r≥8 (exploration), 1 at r≤2
+            holeController.starDensity = Mathf.Lerp(savedStarDensity, 0.55f, k);
+            holeController.nebulaHaze = Mathf.Lerp(savedNebula, 0.35f, k);
+            holeController.Apply();
+        }
+
+        /// <summary>Highest safe upward pitch (deg) at radius r: past the
+        /// billboard quad's angular half-width atan(_ViewExtent/r), minus the
+        /// half-FOV and a 4° margin, the frame runs off the quad and shows
+        /// raw un-lensed skybox. Adapts to the live camera FOV.</summary>
+        float SafeTiltCap(float r)
+        {
+            const float viewExtent = 15f; // matches BlackHoleRaymarch.mat _ViewExtent
+            float halfFovV = 16f;
+            var cam = GetComponent<Camera>();
+            if (cam != null && cam.fieldOfView > 0f) halfFovV = cam.fieldOfView * 0.5f;
+            float thetaMax = Mathf.Atan2(viewExtent, Mathf.Max(r, 0.01f)) * Mathf.Rad2Deg;
+            return Mathf.Max(0f, thetaMax - halfFovV - 4f);
+        }
+
+        /// <summary>Establishing swoop: eases the camera from its live pose to
+        /// the canonical fall pose (dirTo · rToRs) along an arc around the hole,
+        /// so an off-nominal start angle never snaps on the first descent frame.
+        /// LookAt(hole) at both ends keeps rotation continuous into Glide.</summary>
+        IEnumerator Settle(Vector3 fromPos, Vector3 dirTo, float rToRs, float rs, float dur)
+        {
+            Vector3 offFrom = fromPos - hole.position;
+            float rFrom = Mathf.Max(offFrom.magnitude, 1e-4f);
+            Vector3 nFrom = offFrom / rFrom;
+            float rTo = rToRs * rs;
+            for (float t = 0f; t < dur; t += Time.deltaTime)
+            {
+                float u = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur));
+                transform.position = hole.position + Vector3.Slerp(nFrom, dirTo, u) * Mathf.Lerp(rFrom, rTo, u);
+                transform.LookAt(hole.position);
+                yield return null;
+            }
+            transform.position = hole.position + dirTo * rTo;
+            transform.LookAt(hole.position);
         }
 
         IEnumerator Run()
@@ -113,24 +187,44 @@ namespace BlackHoleEffect
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
 
-            // Densify the background sky for the duration of the fall: past
-            // r ≈ 3 the only light left is the star cone behind us, and at
-            // the exploration density it reads as a black screen.
+            // Save the exploration sky density; the boost is NOT applied up
+            // front (that made the start look denser than the exploration
+            // view) — UpdateStarDensity ramps it in with depth instead.
             holeController = hole.GetComponent<BlackHoleController>();
             if (holeController != null)
             {
                 savedStarDensity = holeController.starDensity;
                 savedNebula = holeController.nebulaHaze;
-                holeController.starDensity = 0.55f;
-                holeController.nebulaHaze = 0.35f;
-                holeController.Apply();
             }
 
             savedPos = transform.position;
             savedRot = transform.rotation;
             float rs = hole.lossyScale.x;
-            Vector3 dir = (savedPos - hole.position).normalized;
-            float r0 = (savedPos - hole.position).magnitude / rs;
+
+            // Background drift is unified with the ambient orbit the fall
+            // interrupts — same rate, so it never feels faster than the
+            // exploration/merger views. Accumulates from 0 across every stage.
+            driftRate = orbit != null ? orbit.orbitSpeed : 0.8f;
+            spiralAz = 0f;
+
+            // FIXED start pose so every fall opens from the same angle and
+            // distance, no matter where the user had orbited/zoomed to. Only
+            // the approach AZIMUTH follows their current heading — on the
+            // axisymmetric disk that looks identical, and it avoids a jarring
+            // sideways fly-around. Elevation and radius are constants: a steady
+            // 15° above the disk plane at 24 Rs. Settle (below) swoops smoothly
+            // from wherever they were to this pose.
+            const float startElevDeg = 15f;
+            const float startR = 24f;
+            Vector3 raw = savedPos - hole.position;
+            float r0Raw = raw.magnitude / rs;
+            Vector3 rawDir = raw.normalized;
+            Vector3 flat = new Vector3(raw.x, 0f, raw.z);
+            float horiz = flat.magnitude;
+            if (horiz < 1e-4f) flat = Vector3.forward; else flat /= horiz;
+            float elev = startElevDeg * Mathf.Deg2Rad;
+            Vector3 dir = (flat * Mathf.Cos(elev) + Vector3.up * Mathf.Sin(elev)).normalized;
+            float r0 = startR;
             float len;
 
             // --- Framing: say what this experience is about before moving.
@@ -142,7 +236,25 @@ namespace BlackHoleEffect
                 "What would you see if you fell into a black hole?\nThe camera now begins its free fall.",
                 "もしブラックホールに落ちたら、何が見えるのでしょうか。\nこれからカメラが自由落下を始めます。",
                 "如果掉进黑洞，你会看到什么？\n现在，镜头开始自由落体。"));
-            yield return new WaitForSeconds(Mathf.Max(3.4f, len + 0.5f));
+            // Ease into the canonical pose during the framing beat — but only
+            // when the pose actually needs to change (gate on the real angular
+            // + radial delta, NOT on raw elevation: a below-plane start reflects
+            // to above-plane, which changes dir even when |elevRaw| is small,
+            // and would otherwise snap on the first descent frame). The common
+            // un-orbited start yields reframe=false, settleDur=0 → identical to
+            // before. The wait is shortened by settleDur so narration stays in
+            // sync (cap 2.2s < the 3.4s floor keeps the remainder positive).
+            bool reframe = Vector3.Angle(rawDir, dir) > 1.5f || Mathf.Abs(r0Raw - r0) > 0.5f;
+            float settleDur = reframe
+                ? Mathf.Clamp(0.9f + 0.02f * (Mathf.Abs(r0Raw - r0) + Vector3.Angle(rawDir, dir)), 0f, 2.2f)
+                : 0f;
+            if (settleDur > 0f) yield return Settle(savedPos, dir, r0, rs, settleDur);
+            // Drift-hold during the framing beat: r held, no tilt, but the
+            // shared constant-rate drift keeps ticking so the fall never opens
+            // on a frozen frame — motion begins on the first second, at the
+            // exact rate of the ambient orbit it replaces.
+            float holdDur = Mathf.Max(3.4f, len + 0.5f) - settleDur;
+            yield return Glide(r0, r0, holdDur, 1f, dir, rs, null);
 
             // --- Staged descent: each stage owns one narrated line, and the
             // stage lasts at least as long as its voice clip.
@@ -179,7 +291,7 @@ namespace BlackHoleEffect
                 "마지막 빛의 고리가 머리 위로 좁혀듭니다.",
                 "The last ring of light closes in overhead.",
                 "最後の光のリングが頭上で狭まっていきます。",
-                "最后的光环在头顶收拢。") + RLine(r), 35f, 85f);
+                "最后的光环在头顶收拢。") + RLine(r), 35f, 62f);
             yield return new WaitForSeconds(0.6f); // brief hold at the brink
 
             len = Narrate(5);
@@ -190,11 +302,15 @@ namespace BlackHoleEffect
                 "我们已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
             // Swing back toward the hole while plunging: the ring band
             // collapses and the view goes genuinely, completely black at the
-            // exact moment the horizon-crossed caption lands. (Never tilt
-            // past ~85° here — beyond the raymarch quad's rim the raw,
-            // un-lensed skybox would leak in, which is exactly wrong inside
-            // the horizon.)
-            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 85f, 45f);
+            // exact moment the horizon-crossed caption lands. Two guarantees
+            // of true black here: (1) tilt is capped by SafeTiltCap so the
+            // frame never runs off the raymarch quad's rim into raw un-lensed
+            // skybox (which would be exactly wrong inside the horizon), and
+            // (2) a full-screen black overlay fades in over r∈[1.0,0.65] —
+            // physically, the forward view inside the horizon IS black.
+            EnsureBlackOverlay();
+            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 62f, 45f,
+                onFrame: r => SetBlack(Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(1.0f, 0.65f, r))));
             // Hold the darkness — this IS the physics — then the looking-back
             // window rises small and dim while the horizon line finishes.
             yield return new WaitForSeconds(2.2f);
@@ -265,6 +381,33 @@ namespace BlackHoleEffect
             Finish();
         }
 
+        // ---------------- inside-horizon black overlay ----------------
+        /// <summary>Full-screen black Image on the UI canvas (which draws over
+        /// the raymarch quad). Guarantees a genuinely black forward view at and
+        /// after the horizon crossing regardless of quad-rim geometry.</summary>
+        void EnsureBlackOverlay()
+        {
+            if (blackOverlay != null) return;
+            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+            var go = new GameObject("FallIn Black") { hideFlags = HideFlags.DontSave };
+            go.transform.SetParent(canvas.transform, false);
+            var rt = go.AddComponent<RectTransform>();
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            blackOverlay = go.AddComponent<Image>();
+            blackOverlay.color = new Color(0f, 0f, 0f, 0f);
+            blackOverlay.raycastTarget = false; // never block the Stop button
+            go.transform.SetSiblingIndex(0);     // very back of the canvas
+        }
+
+        void SetBlack(float a)
+        {
+            if (blackOverlay == null) EnsureBlackOverlay();
+            blackOverlay.gameObject.SetActive(true);
+            var c = blackOverlay.color; c.a = Mathf.Clamp01(a); blackOverlay.color = c;
+        }
+
         // ---------------- looking-back sky circle ----------------
         void EnsureSkyImage()
         {
@@ -272,9 +415,11 @@ namespace BlackHoleEffect
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
             var go = new GameObject("FallIn Sky") { hideFlags = HideFlags.DontSave };
             go.transform.SetParent(canvas.transform, false);
-            // Behind the caption/buttons (last siblings draw on top anyway
-            // because the caption panel was created earlier — keep this first).
-            go.transform.SetSiblingIndex(0);
+            // Draw order (back → front): black overlay, looking-back circle,
+            // caption/stop (created earlier, higher indices). The circle must
+            // sit ABOVE the opaque black overlay or it would be hidden.
+            if (blackOverlay != null) { blackOverlay.transform.SetSiblingIndex(0); go.transform.SetSiblingIndex(1); }
+            else go.transform.SetSiblingIndex(0);
             var rt = go.AddComponent<RectTransform>();
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
             rt.pivot = new Vector2(0.5f, 0.5f);
