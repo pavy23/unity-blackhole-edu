@@ -36,7 +36,7 @@ namespace BlackHoleEffect
             "만약 두 개의 블랙홀이 서로 가까이 있다면 어떤 일이 벌어질까요? 두 블랙홀은 서로의 둘레를 돌며, 중력파로 에너지를 잃고, 나선을 그리며 서서히 가까워집니다.",
             "가까워질수록 공전은 빨라지고, 시공간의 잔물결인 중력파는 점점 높은 음으로 울립니다. 이것이 라이고가 들은 '처프'입니다.",
             "병합! 두 지평선이 하나가 되고, 태양 세 개 분량의 질량이 순수한 중력파 에너지로 우주에 방출됩니다.",
-            "남은 것은 더 크고, 빠르게 회전하는 하나의 블랙홀입니다. 2015년 9월 14일, 인류는 이 소리를 처음으로 들었습니다. 지 더블유 일오공구일사.",
+            "남은 것은 더 크고, 빠르게 회전하는 하나의 블랙홀입니다. 인류가 처음 들은 이 소리는 GW150914로 불립니다 — 중력파(GW)를 2015년 9월 14일에 검출했다는 뜻입니다.",
         };
 
         public static readonly string[] LinesEn =
@@ -44,7 +44,7 @@ namespace BlackHoleEffect
             "What happens when two black holes live side by side? They circle each other, losing energy to gravitational waves, spiraling slowly closer.",
             "As they close in, the orbit speeds up, and the ripples in spacetime — gravitational waves — ring at an ever higher pitch. This is the chirp that LIGO heard.",
             "Merger! The two horizons become one, and three suns' worth of mass is radiated into space as pure gravitational-wave energy.",
-            "What remains is a single black hole — larger, and spinning fast. On September 14th, 2015, humanity heard this sound for the first time: GW150914.",
+            "What remains is a single black hole — larger, and spinning fast. The first sound humanity ever heard is called GW150914 — a Gravitational Wave detected on September 14th, 2015.",
         };
 
         public static readonly string[] LinesJa =
@@ -52,7 +52,7 @@ namespace BlackHoleEffect
             "もし、ふたつのブラックホールがすぐ近くにあったら、何が起こるのでしょうか。ふたつは互いの周りを回りながら、重力波でエネルギーを失い、らせんを描いてゆっくりと近づいていきます。",
             "近づくほど公転は速くなり、時空のさざ波である重力波は、どんどん高い音で鳴り響きます。これがLIGOが聴いた「チャープ」です。",
             "合体！ふたつの地平面がひとつになり、太陽3個分の質量が純粋な重力波のエネルギーとして宇宙に放たれます。",
-            "残ったのは、より大きく、速く回転するひとつのブラックホール。2015年9月14日、人類はこの音を初めて聴きました。GW150914です。",
+            "残ったのは、より大きく、速く回転するひとつのブラックホール。人類が初めて聴いたこの音は GW150914 と呼ばれます — 2015年9月14日に検出された重力波（GW）という意味です。",
         };
 
         public static readonly string[] LinesZh =
@@ -60,7 +60,7 @@ namespace BlackHoleEffect
             "如果两个黑洞彼此靠得很近，会发生什么？它们互相绕转，因引力波失去能量，沿着螺旋轨道慢慢靠近。",
             "越靠近，公转越快，时空的涟漪——引力波——发出的音调也越来越高。这就是LIGO听到的“啁啾”声。",
             "并合！两个视界合而为一，相当于三个太阳的质量化作纯粹的引力波能量释放到宇宙中。",
-            "留下的是一个更大、快速旋转的黑洞。2015年9月14日，人类第一次听到了这个声音——GW150914。",
+            "留下的是一个更大、快速旋转的黑洞。人类第一次听到的这个声音被命名为 GW150914——意思是2015年9月14日探测到的引力波（GW）。",
         };
 
         static readonly int BinaryOnId = Shader.PropertyToID("_BinaryOn");
