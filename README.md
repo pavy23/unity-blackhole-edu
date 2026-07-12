@@ -16,7 +16,8 @@ color come from relativistic shifts: Doppler beaming, gravitational redshift, an
 - **Kerr (spinning) black hole** — Kerr–Schild coordinate Hamiltonian integration: D-shaped shadow,
   frame dragging, disk inner edge tracking the prograde ISCO(a) (key 3, presets 0 → 0.998)
 - **Binary black hole merger** — the GW150914 story (F4): two lensing centers inspiraling on a
-  Peters-equation orbit, gravitational-wave chirp audio synced to the actual orbital frequency,
+  Peters-equation orbit inside a circumbinary-disk cavity, each carrying a **tidally truncated
+  minidisk** of its own, gravitational-wave chirp audio synced to the actual orbital frequency,
   merger flash, quadrupole-deformed wavefronts, ringdown, and a Kerr remnant with 95% of the total
   mass and spin a ≈ 0.69
 - **Experiences** — 11-step narrated guided tour (F1), star-collapse birth intro (F2), fully narrated
@@ -68,8 +69,12 @@ Being honest about what is *not* rigorous:
   would look frozen); mass presets change the numbers correctly but the visual scale ratios are
   stylized so everything stays on screen.
 - **Binary lensing is a superposition** of two Schwarzschild deflections. No analytic two-black-hole
-  metric exists; the last orbits really require numerical relativity. Ringdown audio is a damped
-  sine, not the quasi-normal-mode spectrum. GW "rings" visualize invisible strain.
+  metric exists; the last orbits really require numerical relativity. The gas picture follows the
+  standard simulation morphology — circumbinary disk + cavity + per-hole minidisks (truncated at
+  ~0.35 of the separation) — but uses the same stylized thin-disk model, with no accretion streams
+  between the components. Ringdown audio is a damped sine, not the quasi-normal-mode spectrum. GW
+  "rings" visualize invisible strain. (GW150914 itself was almost certainly gas-free — no
+  electromagnetic counterpart was observed; the gas is there to make the dynamics visible.)
 - **No radiative transfer.** Disk brightness/opacity profiles, turbulence noise and the bright
   "knots" are procedural art shaped by the physics (Keplerian shear), not MHD simulation output.
   Bloom and exposure are tuned for legibility.
@@ -103,7 +108,7 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 
 ## Requirements
 
-- Unity 6 (URP 17); the XR packages are only needed for the MR scene
+- **Unity 6000.5.3f1** (Unity 6, URP 17); the XR packages are only needed for the MR scene
 - Narration audio ships in `Assets/BlackHoleEffect/Resources/Narration/` (regenerate with
   [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `Lines` arrays)
 

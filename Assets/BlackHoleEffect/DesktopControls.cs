@@ -306,6 +306,11 @@ namespace BlackHoleEffect
         void SetupPostFX()
         {
             if (!Application.isPlaying) return;
+            // DontSave objects survive play-mode exit in the editor — sweep
+            // strays so volumes never stack across sessions.
+            foreach (var v in Resources.FindObjectsOfTypeAll<UnityEngine.Rendering.Volume>())
+                if (v != null && v.gameObject.name == "BlackHole PostFX")
+                    DestroyImmediate(v.gameObject);
             var camData = GetComponent<Camera>().GetUniversalAdditionalCameraData();
             camData.renderPostProcessing = true;
 

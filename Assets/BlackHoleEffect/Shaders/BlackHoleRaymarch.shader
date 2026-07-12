@@ -220,6 +220,43 @@ Shader "BlackHole/RaymarchedBlackHole"
                 return c * _DiskTint.rgb * density * boost * _DiskBrightness;
             }
 
+            // Minidisk: the small, hot disk each hole in a binary keeps for
+            // itself out of gas leaking through the circumbinary cavity.
+            // Radii are in sim units of the LOCAL hole (horizon 2m); the
+            // Schwarzschild metric is scale-free, so relShift is evaluated at
+            // the mass-rescaled radius r/m. Tidal truncation (outer bound
+            // passed in as ~0.35 x separation) makes the minidisks shrink and
+            // vanish naturally as the holes close in.
+            float3 shadeMiniDisk(float3 rel, float m, float outerSim, float3 velN, out float alpha)
+            {
+                alpha = 0.0;
+                float innerSim = 2.5 * m;               // just outside the horizon at 2m
+                if (outerSim <= innerSim * 1.2) return float3(0.0, 0.0, 0.0);
+                float rSim = length(rel.xz);
+                if (rSim < innerSim || rSim > outerSim) return float3(0.0, 0.0, 0.0);
+
+                float x = (rSim - innerSim) / (outerSim - innerSim);
+                float density = smoothstep(0.0, 0.10, x)
+                              * exp(-2.2 * x)
+                              * (1.0 - smoothstep(0.55, 1.0, x));
+
+                // Same seam-free circle-embedded noise as the main disk,
+                // spinning at the local (much faster) Keplerian rate.
+                float ang = atan2(rel.z, rel.x);
+                float omega = 4.2 * _FlowSpeed / pow(max(rSim / m, 2.2), 1.5);
+                float theta = ang + _Time.y * omega + log2(max(rSim, 0.5)) * 1.2;
+                float n = bh_fbm3(float3(cos(theta) * 1.4, sin(theta) * 1.4, log2(max(rSim, 0.5)) * _DiskDetail));
+                density *= lerp(1.0 - _DiskContrast, 1.0 + 1.6 * _DiskContrast, n);
+
+                float shift = relShift(rel, max(rSim / m, 2.4), velN);
+                float boost = min(shift * shift * shift, 5.0);
+                // Small disks run hotter: anchored a step above the big disk.
+                float3 c = blackbodyRGB(4700.0 * _DiskTemp * 1.25 * pow(innerSim / rSim, 0.75) * shift);
+
+                alpha = saturate(density * 1.8) * 0.9 * saturate(_DiskBrightness);
+                return c * _DiskTint.rgb * density * boost * _DiskBrightness;
+            }
+
             // Volumetric "atmosphere" above/below the disk sheet: a flaring
             // slab of faint gas that softens the paper-thin look.
             void sampleHaze(float3 p, float3 velN, float dt, inout float3 col, inout float trans)
@@ -385,16 +422,23 @@ Shader "BlackHole/RaymarchedBlackHole"
                                     - 1.5 * m2 * dot(h2n, h2n) * rel2n / max(pow(length(rel2n), 5.0), 1e-4);
                         vel = vHalf + accN * (dt * 0.5);
 
-                        // Circumbinary disk: the shading is still centred on
-                        // the barycenter (origin) — the pair orbits inside
-                        // the cavity it has carved.
+                        // Circumbinary disk (barycenter-centred; the pair
+                        // orbits inside the cavity it has carved) plus a
+                        // tidally truncated minidisk around each hole — all
+                        // three sheets share the equatorial plane, so one
+                        // crossing test serves them all.
                         sampleHaze((p + pn) * 0.5, normalize(vel), dt, col, trans);
                         if (p.y * pn.y < 0.0)
                         {
                             float tc = p.y / (p.y - pn.y);
                             float3 hp = lerp(p, pn, tc);
-                            float alpha;
-                            float3 dcol = shadeDisk(hp, normalize(vel), alpha);
+                            float3 vN = normalize(vel);
+                            float alpha, aM1, aM2;
+                            float3 dcol = shadeDisk(hp, vN, alpha);
+                            float truncSep = 0.35 * length(c1 - c2);
+                            dcol += shadeMiniDisk(hp - c1, m1, min(5.5 * m1, truncSep), vN, aM1);
+                            dcol += shadeMiniDisk(hp - c2, m2, min(5.5 * m2, truncSep), vN, aM2);
+                            alpha = saturate(alpha + aM1 + aM2);
                             col += trans * dcol;
                             trans *= 1.0 - alpha;
                         }
