@@ -4,14 +4,16 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// First-launch language picker, centered over the live scene. Picking a
-    /// language sets Loc and refreshes every visible overlay; the app then
-    /// stays in free exploration (experiences start from F1–F4).
-    /// K still cycles languages any time later.
+    /// Persistent language selector: a small button in the top-right corner
+    /// showing the current language; clicking it drops down the four
+    /// options. Always available (K still cycles), hidden while a cinematic
+    /// owns that corner with its skip/stop button.
     /// </summary>
     public static class LanguageSelect
     {
-        public static bool Open { get; private set; }
+        static Button mainButton;
+        static Text mainLabel;
+        static RectTransform dropdown;
 
         static readonly (Loc.Lang lang, string label)[] Options =
         {
@@ -21,36 +23,60 @@ namespace BlackHoleEffect
             (Loc.Lang.Chinese,  "中文"),
         };
 
-        public static void Show(System.Action onDone)
+        public static void CreateWidget()
         {
-            if (Open) return;
-            Open = true;
-
+            if (mainButton != null) return;
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
-            var panel = BlackHoleUI.MakePanel(canvas.transform, "Language Select",
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 30f), new Vector2(440f, 372f));
+            mainButton = BlackHoleUI.MakeButton(canvas.transform, "Language Button", "",
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -26f), new Vector2(150f, 40f),
+                ToggleDropdown);
+            mainLabel = mainButton.GetComponentInChildren<Text>();
+            UpdateLabel();
+            Loc.Changed -= UpdateLabel;   // statics can survive play sessions
+            Loc.Changed += UpdateLabel;
+        }
 
-            var title = BlackHoleUI.MakeText(panel, "Title", 21, BlackHoleUI.TitleGold, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -18f), new Vector2(400f, 28f), FontStyle.Bold);
-            title.text = "언어를 선택하세요";
+        /// <summary>Cinematics reuse this corner for their skip/stop button.</summary>
+        public static void SetVisible(bool on)
+        {
+            if (mainButton != null) mainButton.gameObject.SetActive(on);
+            if (!on) CloseDropdown();
+        }
 
-            var sub = BlackHoleUI.MakeText(panel, "Subtitle", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -48f), new Vector2(400f, 22f));
-            sub.text = "Choose your language · 言語を選択 · 请选择语言";
+        static void UpdateLabel()
+        {
+            if (mainLabel != null) mainLabel.text = Loc.DisplayName + "  ▾";
+        }
 
+        static void ToggleDropdown()
+        {
+            if (dropdown != null && dropdown.gameObject.activeSelf) { CloseDropdown(); return; }
+            if (dropdown == null) BuildDropdown();
+            dropdown.gameObject.SetActive(true);
+        }
+
+        static void CloseDropdown()
+        {
+            if (dropdown != null) dropdown.gameObject.SetActive(false);
+        }
+
+        static void BuildDropdown()
+        {
+            var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
+            dropdown = BlackHoleUI.MakePanel(canvas.transform, "Language Dropdown",
+                new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-26f, -72f), new Vector2(150f, 4f + Options.Length * 46f),
+                accentLine: false);
             for (int i = 0; i < Options.Length; i++)
             {
                 var lang = Options[i].lang;
-                BlackHoleUI.MakeButton(panel, "Lang " + Options[i].label, Options[i].label,
-                    new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -92f - i * 62f), new Vector2(300f, 50f),
+                BlackHoleUI.MakeButton(dropdown, "Lang " + Options[i].label, Options[i].label,
+                    new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -4f - i * 46f), new Vector2(138f, 42f),
                     () =>
                     {
                         Loc.SetLanguage(lang);
                         var controls = Object.FindAnyObjectByType<DesktopControls>();
                         if (controls != null) controls.RefreshLanguage();
-                        Object.Destroy(panel.gameObject);
-                        Open = false;
-                        onDone?.Invoke();
+                        CloseDropdown();
                     });
             }
         }

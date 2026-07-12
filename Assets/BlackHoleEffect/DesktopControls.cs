@@ -267,6 +267,8 @@ namespace BlackHoleEffect
             if (comparison != null && on) { comparison.show = false; comparison.Refresh(); }
             if (annotations != null) annotations.showLabels = !on;
             if (theory != null && on) theory.SetVisible(false);
+            // Cinematics put their skip/stop button in the same corner.
+            LanguageSelect.SetVisible(!on);
         }
 
         void Start()
@@ -294,6 +296,9 @@ namespace BlackHoleEffect
             theory.binary = binary;
 
             SetupPostFX();
+
+            // Always-available language selector in the top-right corner.
+            if (Application.isPlaying) LanguageSelect.CreateWidget();
         }
 
         /// <summary>Gentle bloom so the HDR disk (and GW rings) actually glow.

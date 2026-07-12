@@ -188,24 +188,27 @@ namespace BlackHoleEffect
                 "We have crossed the event horizon.\nNo signal can ever reach the outside universe again.",
                 "事象の地平面を通過しました。\n外の宇宙へは、もうどんな信号も送れません。",
                 "我们已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
-            // Turn almost fully backward: the last stars compress and wink
-            // out right as we cross — the true black lands ON the caption.
-            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 85f, 150f);
-            // A short beat of true darkness — then the looking-back circle
-            // rises while the horizon line finishes, so pure black never
-            // outstays its welcome.
-            yield return new WaitForSeconds(1.8f);
+            // Swing back toward the hole while plunging: the ring band
+            // collapses and the view goes genuinely, completely black at the
+            // exact moment the horizon-crossed caption lands. (Never tilt
+            // past ~85° here — beyond the raymarch quad's rim the raw,
+            // un-lensed skybox would leak in, which is exactly wrong inside
+            // the horizon.)
+            yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null, 85f, 45f);
+            // Hold the darkness — this IS the physics — then the looking-back
+            // window rises small and dim while the horizon line finishes.
+            yield return new WaitForSeconds(2.2f);
             EnsureSkyImage();
             skyImage.gameObject.SetActive(true);
             for (float t = 0f; t < 1.1f; t += Time.deltaTime)
             {
                 float k = t / 1.1f;
-                float size = Mathf.Lerp(30f, 640f, Mathf.SmoothStep(0f, 1f, k));
+                float size = Mathf.Lerp(24f, 300f, Mathf.SmoothStep(0f, 1f, k));
                 skyImage.rectTransform.sizeDelta = new Vector2(size, size);
-                skyImage.color = new Color(1f, 0.98f, 0.92f, k);
+                skyImage.color = new Color(1f, 0.98f, 0.92f, 0.9f * k);
                 yield return null;
             }
-            yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 1.8f - 1.1f));
+            yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 2.2f - 1.1f));
 
             // --- Epilogue: turn around. The view "forward" (toward the
             // singularity) really is black — but looking back, the outside
@@ -221,9 +224,11 @@ namespace BlackHoleEffect
             for (float t = 0f; t < lookBack; t += Time.deltaTime)
             {
                 float k = t / lookBack;
-                float size = Mathf.Lerp(640f, 70f, Mathf.Pow(k, 1.2f));
+                float size = Mathf.Lerp(300f, 56f, Mathf.Pow(k, 1.2f));
                 skyImage.rectTransform.sizeDelta = new Vector2(size, size);
-                skyImage.color = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
+                Color cs = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
+                cs.a = 0.9f;
+                skyImage.color = cs;
                 yield return null;
             }
 
@@ -239,10 +244,10 @@ namespace BlackHoleEffect
             for (float t = 0f; t < die; t += Time.deltaTime)
             {
                 float k = t / die;
-                float size = Mathf.Lerp(70f, 12f, k);
+                float size = Mathf.Lerp(56f, 8f, k);
                 skyImage.rectTransform.sizeDelta = new Vector2(size, size);
                 Color c = Color.Lerp(new Color(0.45f, 0.65f, 1f), new Color(0.25f, 0.35f, 0.85f), k);
-                c.a = Mathf.Pow(1f - k, 1.3f);
+                c.a = 0.9f * Mathf.Pow(1f - k, 1.3f);
                 skyImage.color = c;
                 yield return null;
             }

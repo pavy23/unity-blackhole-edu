@@ -65,22 +65,6 @@ namespace BlackHoleEffect
             "最后留下的……是一个连光都无法逃脱的黑洞。",
         };
 
-        void Start()
-        {
-            // Language picker only — the intro itself stays on F2 so the
-            // user starts in free exploration, not in a cinematic.
-            if (Application.isPlaying)
-                StartCoroutine(ShowLanguagePicker());
-        }
-
-        IEnumerator ShowLanguagePicker()
-        {
-            // A short beat so the scene (canvas, audio) settles in.
-            yield return new WaitForSeconds(0.5f);
-            if (controls != null && controls.CinematicBusy) yield break;
-            LanguageSelect.Show(null);
-        }
-
         void Update()
         {
             if (!IsPlaying) return;
