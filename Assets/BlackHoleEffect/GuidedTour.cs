@@ -6,7 +6,7 @@ namespace BlackHoleEffect
     /// Guided tour: steps through the physics of the scene one concept at a
     /// time — highlighting the matching label, triggering the matching demo,
     /// and showing narration text at the bottom of the view.
-    /// G = start/stop, N/→ = next, B/← = previous (wired in DesktopControls).
+    /// F1 = start/stop, N/→ = next, B/← = previous (wired in DesktopControls).
     /// </summary>
     public class GuidedTour : MonoBehaviour
     {
@@ -204,10 +204,10 @@ namespace BlackHoleEffect
             cardBody.text = body + (string.IsNullOrEmpty(hint)
                 ? "" : "\n<color=#9AA3B5>(" + hint + ")</color>");
 
-            cardFooter.text = Loc.T("N 다음    B 이전    G 종료    X 수식",
-                                    "N Next    B Prev    G End    X Math",
-                                    "N 次へ    B 前へ    G 終了    X 数式",
-                                    "N 下一步    B 上一步    G 结束    X 公式")
+            cardFooter.text = Loc.T("N 다음    B 이전    F1 종료    X 수식",
+                                    "N Next    B Prev    F1 End    X Math",
+                                    "N 次へ    B 前へ    F1 終了    X 数式",
+                                    "N 下一步    B 上一步    F1 结束    X 公式")
                             + "                                  " + (step + 1) + " / " + Steps.Length;
         }
 

@@ -53,6 +53,7 @@ namespace BlackHoleEffect
         {
             if (!IsFalling) return;
             if (routine != null) StopCoroutine(routine);
+            NarrationManager.Instance.Stop();
             DestroySkyDisk();
             transform.position = savedPos;
             transform.rotation = savedRot;
@@ -71,6 +72,12 @@ namespace BlackHoleEffect
         /// <summary>Moves the camera from rFrom to rTo (in Rs) over dur
         /// seconds with the given easing exponent, keeping the live r
         /// readout in the caption via the formatter.</summary>
+        /// <summary>Plays fall_{i} in the active language; returns clip length.</summary>
+        static float Narrate(int i) => NarrationManager.Instance.Play("fall_" + i);
+
+        /// <summary>Unspoken gray live-distance line under the caption.</summary>
+        static string RLine(float r) => "\n<color=#9AA3B5>r = " + r.ToString("0.0") + " Rs</color>";
+
         IEnumerator Glide(float rFrom, float rTo, float dur, float ease,
                           Vector3 dir, float rs, System.Func<float, string> captionFor)
         {
@@ -97,68 +104,75 @@ namespace BlackHoleEffect
             float rs = hole.lossyScale.x;
             Vector3 dir = (savedPos - hole.position).normalized;
             float r0 = (savedPos - hole.position).magnitude / rs;
+            float len;
 
             // --- Framing: say what this experience is about before moving.
+            // Captions are the narration transcript (fall_0..fall_7); the
+            // live r readout is an unspoken gray line, like the tour hints.
+            len = Narrate(0);
             Caption(Loc.T(
                 "만약 블랙홀 안으로 떨어진다면, 무엇을 보게 될까요?\n지금부터 카메라가 자유낙하를 시작합니다.",
                 "What would you see if you fell into a black hole?\nThe camera now begins its free fall.",
                 "もしブラックホールに落ちたら、何が見えるのでしょうか。\nこれからカメラが自由落下を始めます。",
                 "如果掉进黑洞，你会看到什么？\n现在，镜头开始自由落体。"));
-            yield return new WaitForSeconds(3.4f);
+            yield return new WaitForSeconds(Mathf.Max(3.4f, len + 0.5f));
 
-            // --- Staged descent: each caption owns its stage, so the text
-            // and the visuals can never drift apart.
-            yield return Glide(r0, 4.5f, fallDuration * 0.5f, 1.7f, dir, rs, r =>
-            {
-                string rTxt = r.ToString("0.0");
-                return r > 8f
-                ? Loc.T(
-                    "자유낙하 시작 —  r = " + rTxt + " Rs\n아직은 평범한 우주입니다.",
-                    "Free fall begins —  r = " + rTxt + " Rs\nSpace still looks ordinary out here.",
-                    "自由落下開始 —  r = " + rTxt + " Rs\nまだ、ふつうの宇宙です。",
-                    "自由落体开始 —  r = " + rTxt + " Rs\n这里还是平常的宇宙。")
-                : Loc.T(
-                    "r = " + rTxt + " Rs —  원반이 하늘을 뒤덮기 시작합니다.\n밖의 시간은 점점 빨라 보입니다.",
-                    "r = " + rTxt + " Rs —  the disk begins to swallow the sky.\nTime outside appears to run faster and faster.",
-                    "r = " + rTxt + " Rs —  円盤が空を覆いはじめます。\n外の時間はどんどん速く見えます。",
-                    "r = " + rTxt + " Rs —  吸积盘开始遮蔽天空。\n外面的时间看起来越来越快。");
-            });
+            // --- Staged descent: each stage owns one narrated line, and the
+            // stage lasts at least as long as its voice clip.
+            float mid = Mathf.Clamp(r0 * 0.55f, 4.6f, 8f);
+            len = Narrate(1);
+            yield return Glide(r0, mid, Mathf.Max(4.5f, len + 0.3f), 1.5f, dir, rs, r => Loc.T(
+                "자유낙하가 시작됩니다. 아직은 평범한 우주입니다.",
+                "Free fall begins. Space still looks ordinary out here.",
+                "自由落下が始まります。まだ、ふつうの宇宙です。",
+                "自由落体开始了。这里还是平常的宇宙。") + RLine(r));
 
-            yield return Glide(4.5f, 1.9f, fallDuration * 0.27f, 1f, dir, rs, r => { string rTxt = r.ToString("0.0"); return Loc.T(
-                "r = " + rTxt + " Rs —  조석력이 몸을 잡아 늘입니다.\n그림자가 시야의 절반을 삼켰습니다.",
-                "r = " + rTxt + " Rs —  tidal forces stretch your body.\nThe shadow has swallowed half your view.",
-                "r = " + rTxt + " Rs —  潮汐力が体を引き伸ばします。\n影が視界の半分を呑み込みました。",
-                "r = " + rTxt + " Rs —  潮汐力开始拉伸你的身体。\n阴影已吞没一半视野。"); });
+            len = Narrate(2);
+            yield return Glide(mid, 4.5f, Mathf.Max(3.5f, len + 0.3f), 1.15f, dir, rs, r => Loc.T(
+                "원반이 하늘을 뒤덮기 시작합니다. 밖의 시간은 점점 빨라 보입니다.",
+                "The disk begins to swallow the sky. Time outside appears to run faster and faster.",
+                "円盤が空を覆いはじめます。外の時間はどんどん速く見えます。",
+                "吸积盘开始遮蔽天空。外面的时间看起来越来越快。") + RLine(r));
 
-            yield return Glide(1.9f, 1.05f, fallDuration * 0.23f, 0.9f, dir, rs, r => { string rTxt = r.ToString("0.0"); return Loc.T(
-                "r = " + rTxt + " Rs —  마지막 빛의 고리가 머리 위로 좁혀듭니다.",
-                "r = " + rTxt + " Rs —  the last ring of light closes in overhead.",
-                "r = " + rTxt + " Rs —  最後の光のリングが頭上で狭まっていきます。",
-                "r = " + rTxt + " Rs —  最后的光环在头顶收拢。"); });
+            len = Narrate(3);
+            yield return Glide(4.5f, 1.9f, Mathf.Max(3.8f, len + 0.3f), 1f, dir, rs, r => Loc.T(
+                "조석력이 몸을 잡아 늘입니다. 그림자가 시야의 절반을 삼켰습니다.",
+                "Tidal forces stretch your body. The shadow has swallowed half your view.",
+                "潮汐力が体を引き伸ばします。影が視界の半分を呑み込みました。",
+                "潮汐力开始拉伸你的身体。阴影已吞没一半视野。") + RLine(r));
+
+            len = Narrate(4);
+            yield return Glide(1.9f, 1.05f, Mathf.Max(3.2f, len + 0.3f), 0.9f, dir, rs, r => Loc.T(
+                "마지막 빛의 고리가 머리 위로 좁혀듭니다.",
+                "The last ring of light closes in overhead.",
+                "最後の光のリングが頭上で狭まっていきます。",
+                "最后的光环在头顶收拢。") + RLine(r));
             yield return new WaitForSeconds(1.6f); // hold at the brink
 
+            len = Narrate(5);
             Caption(Loc.T(
-                "사건의 지평선 통과.\n바깥 우주로는 어떤 신호도 보낼 수 없습니다.",
-                "Event horizon crossed.\nNo signal can ever reach the outside universe again.",
-                "事象の地平面を通過。\n外の宇宙へは、もうどんな信号も送れません。",
-                "已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
+                "사건의 지평선을 통과했습니다.\n바깥 우주로는 어떤 신호도 보낼 수 없습니다.",
+                "We have crossed the event horizon.\nNo signal can ever reach the outside universe again.",
+                "事象の地平面を通過しました。\n外の宇宙へは、もうどんな信号も送れません。",
+                "我们已越过事件视界。\n再也无法向外面的宇宙发出任何信号。"));
             yield return Glide(1.05f, 0.35f, 1.6f, 1f, dir, rs, null);
-            yield return new WaitForSeconds(2.6f); // let the darkness land
+            yield return new WaitForSeconds(Mathf.Max(2.6f, len - 1.1f)); // let the darkness land
 
             // --- Epilogue: turn around. The view "forward" (toward the
             // singularity) really is black — but looking back, the outside
             // universe never disappears: aberration gathers the whole sky
             // into a shrinking, blueshifting circle of light.
+            len = Narrate(6);
             Caption(Loc.T(
-                "뒤를 돌아보면 — 바깥 우주는 사라지지 않습니다.\n온 하늘이 점점 좁아지는 푸른 빛의 원 안으로 모여듭니다.",
-                "Looking back — the outside universe never vanishes.\nThe whole sky gathers into a shrinking, blueshifting circle of light.",
-                "後ろを振り返ると — 外の宇宙は消えていません。\n空全体が、狭まっていく青い光の円の中に集まって見えます。",
-                "回头看——外面的宇宙并没有消失。\n整个天空聚成一个越来越小、越来越蓝的光圈。"));
+                "뒤를 돌아보면, 바깥 우주는 사라지지 않습니다.\n온 하늘이 점점 좁아지는 푸른 빛의 원 안으로 모여듭니다.",
+                "Looking back, the outside universe never vanishes.\nThe whole sky gathers into a shrinking, blueshifting circle of light.",
+                "後ろを振り返ると、外の宇宙は消えていません。\n空全体が、狭まっていく青い光の円の中に集まって見えます。",
+                "回头看，外面的宇宙并没有消失。\n整个天空聚成一个越来越小、越来越蓝的光圈。"));
             // Drawn as a screen-space image: the camera sits inside the
             // raymarch quad here, so world-space props would be occluded.
             EnsureSkyImage();
             skyImage.gameObject.SetActive(true);
-            const float lookBack = 7f;
+            float lookBack = Mathf.Max(7f, len + 0.6f);
             for (float t = 0f; t < lookBack; t += Time.deltaTime)
             {
                 float k = t / lookBack;
@@ -172,12 +186,13 @@ namespace BlackHoleEffect
             }
             skyImage.gameObject.SetActive(false);
 
+            len = Narrate(7);
             Caption(Loc.T(
-                "이 안에서는 모든 미래의 경로가 중심 특이점을 향합니다.\n— 여기까지가 물리학이 말할 수 있는 전부입니다.",
-                "In here, every future path leads to the central singularity.\n— This is as far as physics can speak.",
-                "この中では、あらゆる未来の経路が中心の特異点へ向かいます。\n— ここから先は、物理学が語れる限界です。",
-                "在这里，所有未来的路径都通向中心奇点。\n— 物理学能讲述的，到此为止。"));
-            yield return new WaitForSeconds(4f);
+                "이 안에서는 모든 미래의 경로가 중심 특이점을 향합니다.\n여기까지가 물리학이 말할 수 있는 전부입니다.",
+                "In here, every future path leads to the central singularity.\nThis is as far as physics can speak.",
+                "この中では、あらゆる未来の経路が中心の特異点へ向かいます。\nここから先は、物理学が語れる限界です。",
+                "在这里，所有未来的路径都通向中心奇点。\n物理学能讲述的，到此为止。"));
+            yield return new WaitForSeconds(Mathf.Max(4f, len + 0.6f));
 
             Caption(Loc.T(
                 "체험이 끝났습니다 — 원래 위치로 돌아갑니다.",

@@ -71,7 +71,7 @@ namespace BlackHoleEffect
 
         public void ToggleSweep()
         {
-            if (trails.Count > 0) ClearTrails();
+            if (trails.Count > 0) { ClearTrails(); ExplainCard.Hide(); }
             else FireSweep();
         }
 

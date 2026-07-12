@@ -9,13 +9,11 @@ namespace BlackHoleEffect
     /// <summary>
     /// Keyboard + mouse control for the desktop showcase (play mode).
     ///
-    ///   우클릭 드래그  카메라 궤도 회전      휠           줌
-    ///   1             원반 색 순환          2            질량 순환
-    ///   Space         광자 발사/지우기 토글
-    ///   E             아인슈타인 링         A / D        데모 별 이동
-    ///   L             라벨                  I            물리 패널
-    ///   O             관측사진 비교         H            도움말
-    ///   R             카메라 리셋 (자동 궤도 재개)
+    ///   체험(F1~F4)   F1 투어 · F2 탄생 · F3 낙하 · F4 병합
+    ///   블랙홀(1~4)   1 색상 · 2 질량 · 3 스핀 · 4 난이도
+    ///   현상(알파벳)  Space 광자 · E 링(A/D) · T 조석 · J 제트 · G 렌즈 · V 광도 · O 관측
+    ///   조작(알파벳)  우클릭 회전 · 휠/W/S 줌 · R 리셋 · L 라벨 · I 패널 · X 수식
+    ///                 U 몰입 · M 소리 · K 언어 · P 성능 · F12 스냅샷 · H 도움말
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class DesktopControls : MonoBehaviour
@@ -82,10 +80,17 @@ namespace BlackHoleEffect
         void ToggleLanguage()
         {
             Loc.Cycle();
+            RefreshLanguage();
+            ShowToast(Loc.T("언어: ", "Language: ", "言語: ", "语言: ") + Loc.DisplayName);
+        }
+
+        /// <summary>Re-applies the current language to everything that is not
+        /// rebuilt per frame — used by K and the startup language picker.</summary>
+        public void RefreshLanguage()
+        {
             UpdateHelpText();
             if (tour != null) tour.OnLanguageChanged();
             if (panel != null) panel.RefreshText();
-            ShowToast(Loc.T("언어: ", "Language: ", "言語: ", "语言: ") + Loc.DisplayName);
         }
 
         // ---- one-key preset cycles (1 = disk colors, 2 = mass) ----------
@@ -128,7 +133,7 @@ namespace BlackHoleEffect
         {
             if (einsteinDemo == null) return;
             einsteinDemo.active = !einsteinDemo.active;
-            if (!einsteinDemo.active) return;
+            if (!einsteinDemo.active) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("아인슈타인 링", "Einstein Ring", "アインシュタインリング", "爱因斯坦环"),
                 Loc.T("블랙홀 뒤의 별빛이 중력에 휘어 두 개의 상으로 갈라져 보입니다. 별이 정확히 뒤에 정렬되는 순간, 빛이 사방으로 휘어 완전한 고리가 됩니다. A/D로 별을 직접 움직여 보세요.",
@@ -141,7 +146,7 @@ namespace BlackHoleEffect
         {
             if (spaghetti == null) return;
             spaghetti.active = !spaghetti.active;
-            if (!spaghetti.active) return;
+            if (!spaghetti.active) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("스파게티화 — 조석력", "Spaghettification — Tidal Force", "スパゲッティ化 — 潮汐力", "面条化 — 潮汐力"),
                 Loc.T("별의 머리와 발에 걸리는 중력 차이(조석력)가 별을 국수처럼 길게 늘여 찢습니다. 찢긴 물질은 두 갈래로 갈라져, 절반은 빨려 들고 절반은 튕겨 나갑니다.",
@@ -154,7 +159,7 @@ namespace BlackHoleEffect
         {
             if (jets == null) return;
             jets.active = !jets.active;
-            if (!jets.active) return;
+            if (!jets.active) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("상대론적 제트", "Relativistic Jets", "相対論的ジェット", "相对论性喷流"),
                 Loc.T("빨려 들던 물질의 일부는 삼켜지지 않습니다. 회전하는 자기장에 감겨 올라가 양극에서 거의 광속으로 뿜어져 나가고, 실제 우주에서는 수천 광년까지 뻗어 나갑니다.",
@@ -167,7 +172,7 @@ namespace BlackHoleEffect
         {
             if (lightCurve == null) return;
             lightCurve.show = !lightCurve.show;
-            if (!lightCurve.show) return;
+            if (!lightCurve.show) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("광도 곡선", "Light Curve", "光度曲線", "光变曲线"),
                 Loc.T("원반 전체의 밝기를 시간에 따라 기록한 그래프입니다. 실제 망원경이 블랙홀을 '보는' 방법이죠. T로 별을 찢어 보세요 — 밝기가 치솟는 조석파괴사건(TDE)이 그래프에 나타납니다.",
@@ -181,7 +186,7 @@ namespace BlackHoleEffect
             if (lensDemo == null) return;
             bool wasOn = lensDemo.Active;
             lensDemo.Toggle();
-            if (wasOn) return;
+            if (wasOn) { ExplainCard.Hide(); return; }
             ExplainCard.Show(
                 Loc.T("중력 렌즈", "Gravitational Lensing", "重力レンズ", "引力透镜"),
                 Loc.T("원반을 잠시 꺼서, 배경 별빛이 중력만으로 어떻게 왜곡되는지 봅니다. 밝은 배경 광원이 좌우로 오가며 상이 갈라지고 고리로 이어지는 것을 관찰해 보세요.",
@@ -195,7 +200,8 @@ namespace BlackHoleEffect
             if (comparison == null) return;
             bool wasOff = !comparison.show;
             comparison.CycleMode();
-            if (wasOff && comparison.show)
+            if (!comparison.show) { ExplainCard.Hide(); return; }
+            if (wasOff)
                 ExplainCard.Show(
                     Loc.T("실제 관측과 비교", "Compare with Real Observations", "実際の観測と比較", "与真实观测对比"),
                     Loc.T("사건의 지평선 망원경(EHT)이 촬영한 실제 블랙홀 사진과 이 시뮬레이션을 나란히 비교합니다. O를 다시 누르면 대상이 바뀝니다.",
@@ -396,36 +402,42 @@ namespace BlackHoleEffect
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
+            // Black-hole setup: numbers.
             if (kb.digit1Key.wasPressedThisFrame) CycleColor();
             if (kb.digit2Key.wasPressedThisFrame) CycleMass();
-            if (kb.eKey.wasPressedThisFrame) ToggleEinstein();
-            if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
-            if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
-            if (kb.oKey.wasPressedThisFrame) CycleComparison();
-            if (kb.f1Key.wasPressedThisFrame && hud != null) hud.show = !hud.show;
-            if (kb.f2Key.wasPressedThisFrame) CycleDifficulty();
-            if (kb.f3Key.wasPressedThisFrame) ToggleLens();
-            if (kb.f4Key.wasPressedThisFrame && (binary == null || !binary.Running)) CycleSpin();
-            // One cinematic at a time — F5/F6/F7 are ignored while another runs.
+            if (kb.digit3Key.wasPressedThisFrame && (binary == null || !binary.Running)) CycleSpin();
+            if (kb.digit4Key.wasPressedThisFrame) CycleDifficulty();
+            // Experiences: F1–F4 (one at a time).
+            if (kb.f1Key.wasPressedThisFrame && tour != null)
+            {
+                if (tour.Running) tour.StopTour();
+                else if (!CinematicBusy) tour.StartTour();
+            }
             if (!CinematicBusy)
             {
-                if (kb.f7Key.wasPressedThisFrame && binary != null) binary.Begin();
-                if (kb.f5Key.wasPressedThisFrame && intro != null) intro.Play();
-                if (kb.f6Key.wasPressedThisFrame && fallIn != null) fallIn.Begin();
+                if (kb.f2Key.wasPressedThisFrame && intro != null) intro.Play();
+                if (kb.f3Key.wasPressedThisFrame && fallIn != null) fallIn.Begin();
+                if (kb.f4Key.wasPressedThisFrame && binary != null) binary.Begin();
             }
+            // Phenomena & controls: letters.
+            if (kb.eKey.wasPressedThisFrame) ToggleEinstein();
+            if (kb.tKey.wasPressedThisFrame) ToggleSpaghetti();
+            if (kb.jKey.wasPressedThisFrame) ToggleJets();
+            if (kb.gKey.wasPressedThisFrame) ToggleLens();
             if (kb.vKey.wasPressedThisFrame) ToggleLightCurve();
+            if (kb.oKey.wasPressedThisFrame) CycleComparison();
+            if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
+            if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
+            if (kb.pKey.wasPressedThisFrame && hud != null) hud.show = !hud.show;
             if (kb.f12Key.wasPressedThisFrame) Snapshot();
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
             if (kb.uKey.wasPressedThisFrame) SetImmersive(!immersive);
             if (kb.rKey.wasPressedThisFrame) ResetCamera();
-            if (kb.tKey.wasPressedThisFrame) ToggleSpaghetti();
-            if (kb.jKey.wasPressedThisFrame) ToggleJets();
             if (kb.mKey.wasPressedThisFrame && audioScape != null) audioScape.muted = !audioScape.muted;
             if (kb.xKey.wasPressedThisFrame && theory != null) theory.Toggle();
             if (kb.kKey.wasPressedThisFrame) ToggleLanguage();
             if (tour != null)
             {
-                if (kb.gKey.wasPressedThisFrame) { if (tour.Running) tour.StopTour(); else tour.StartTour(); }
                 if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
                 if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
             }
@@ -435,35 +447,42 @@ namespace BlackHoleEffect
                 if (kb.dKey.isPressed) einsteinDemo.Nudge(12f * Time.deltaTime);
             }
 #else
+            // Black-hole setup: numbers.
             if (Input.GetKeyDown(KeyCode.Alpha1)) CycleColor();
             if (Input.GetKeyDown(KeyCode.Alpha2)) CycleMass();
-            if (Input.GetKeyDown(KeyCode.E)) ToggleEinstein();
-            if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
-            if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
-            if (Input.GetKeyDown(KeyCode.O)) CycleComparison();
-            if (Input.GetKeyDown(KeyCode.F1) && hud != null) hud.show = !hud.show;
-            if (Input.GetKeyDown(KeyCode.F2)) CycleDifficulty();
-            if (Input.GetKeyDown(KeyCode.F3)) ToggleLens();
-            if (Input.GetKeyDown(KeyCode.F4) && (binary == null || !binary.Running)) CycleSpin();
+            if (Input.GetKeyDown(KeyCode.Alpha3) && (binary == null || !binary.Running)) CycleSpin();
+            if (Input.GetKeyDown(KeyCode.Alpha4)) CycleDifficulty();
+            // Experiences: F1–F4 (one at a time).
+            if (Input.GetKeyDown(KeyCode.F1) && tour != null)
+            {
+                if (tour.Running) tour.StopTour();
+                else if (!CinematicBusy) tour.StartTour();
+            }
             if (!CinematicBusy)
             {
-                if (Input.GetKeyDown(KeyCode.F7) && binary != null) binary.Begin();
-                if (Input.GetKeyDown(KeyCode.F5) && intro != null) intro.Play();
-                if (Input.GetKeyDown(KeyCode.F6) && fallIn != null) fallIn.Begin();
+                if (Input.GetKeyDown(KeyCode.F2) && intro != null) intro.Play();
+                if (Input.GetKeyDown(KeyCode.F3) && fallIn != null) fallIn.Begin();
+                if (Input.GetKeyDown(KeyCode.F4) && binary != null) binary.Begin();
             }
+            // Phenomena & controls: letters.
+            if (Input.GetKeyDown(KeyCode.E)) ToggleEinstein();
+            if (Input.GetKeyDown(KeyCode.T)) ToggleSpaghetti();
+            if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
+            if (Input.GetKeyDown(KeyCode.G)) ToggleLens();
             if (Input.GetKeyDown(KeyCode.V)) ToggleLightCurve();
+            if (Input.GetKeyDown(KeyCode.O)) CycleComparison();
+            if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
+            if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
+            if (Input.GetKeyDown(KeyCode.P) && hud != null) hud.show = !hud.show;
             if (Input.GetKeyDown(KeyCode.F12)) Snapshot();
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
             if (Input.GetKeyDown(KeyCode.U)) SetImmersive(!immersive);
             if (Input.GetKeyDown(KeyCode.R)) ResetCamera();
-            if (Input.GetKeyDown(KeyCode.T)) ToggleSpaghetti();
-            if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
             if (Input.GetKeyDown(KeyCode.M) && audioScape != null) audioScape.muted = !audioScape.muted;
             if (Input.GetKeyDown(KeyCode.X) && theory != null) theory.Toggle();
             if (Input.GetKeyDown(KeyCode.K)) ToggleLanguage();
             if (tour != null)
             {
-                if (Input.GetKeyDown(KeyCode.G)) { if (tour.Running) tour.StopTour(); else tour.StartTour(); }
                 if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
                 if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
             }
@@ -543,37 +562,37 @@ namespace BlackHoleEffect
             // Four category rows: controls / experiences / black-hole setup /
             // phenomenon toggles — matching how the features are actually used.
             help.text = Loc.T(
-                Cat("조작") + Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("U") + "몰입  "
-                    + Key("M") + "소리  " + Key("K") + "언어  " + Key("F12") + "스냅샷  " + Key("F1") + "성능  " + Key("H") + "도움말\n"
-                + Cat("체험") + Key("G") + "가이드 투어(N/B)  " + Key("F5") + "블랙홀 탄생  " + Key("F6") + "낙하 체험  " + Key("F7") + "블랙홀 병합\n"
-                + Cat("블랙홀") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("F4") + "스핀  " + Key("F2") + "설명 난이도  "
-                    + Key("L") + "라벨  " + Key("I") + "정보 패널  " + Key("X") + "수식  " + Key("O") + "관측사진\n"
+                Cat("체험 F1~F4") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합\n"
+                + Cat("블랙홀 1~4") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("3") + "스핀  " + Key("4") + "설명 난이도\n"
                 + Cat("현상") + Key("Space") + "광자 발사/지우기  " + Key("E") + "아인슈타인 링(A/D)  " + Key("T") + "스파게티화  "
-                    + Key("J") + "제트  " + Key("F3") + "렌즈  " + Key("V") + "광도곡선",
+                    + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선  " + Key("O") + "관측사진\n"
+                + Cat("조작") + Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("L") + "라벨  " + Key("I") + "패널  "
+                    + Key("X") + "수식  " + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("P") + "성능  "
+                    + Key("F12") + "스냅샷  " + Key("H") + "도움말",
 
-                Cat("Controls") + Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("U") + "immersive  "
-                    + Key("M") + "sound  " + Key("K") + "language  " + Key("F12") + "snapshot  " + Key("F1") + "perf  " + Key("H") + "help\n"
-                + Cat("Experiences") + Key("G") + "guided tour(N/B)  " + Key("F5") + "birth of a hole  " + Key("F6") + "fall in  " + Key("F7") + "merger\n"
-                + Cat("Black hole") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("F4") + "spin  " + Key("F2") + "level  "
-                    + Key("L") + "labels  " + Key("I") + "info panel  " + Key("X") + "math  " + Key("O") + "EHT photo\n"
+                Cat("Experiences F1~F4") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger\n"
+                + Cat("Black hole 1~4") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "level\n"
                 + Cat("Phenomena") + Key("Space") + "photons fire/clear  " + Key("E") + "Einstein ring(A/D)  " + Key("T") + "spaghettify  "
-                    + Key("J") + "jets  " + Key("F3") + "lens  " + Key("V") + "light curve",
+                    + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve  " + Key("O") + "EHT photo\n"
+                + Cat("Controls") + Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("L") + "labels  " + Key("I") + "panel  "
+                    + Key("X") + "math  " + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("P") + "perf  "
+                    + Key("F12") + "snapshot  " + Key("H") + "help",
 
-                Cat("操作") + Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("U") + "没入  "
-                    + Key("M") + "音  " + Key("K") + "言語  " + Key("F12") + "撮影  " + Key("F1") + "性能  " + Key("H") + "ヘルプ\n"
-                + Cat("体験") + Key("G") + "ガイドツアー(N/B)  " + Key("F5") + "誕生  " + Key("F6") + "落下体験  " + Key("F7") + "合体\n"
-                + Cat("ブラックホール") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("F4") + "スピン  " + Key("F2") + "難易度  "
-                    + Key("L") + "ラベル  " + Key("I") + "パネル  " + Key("X") + "数式  " + Key("O") + "観測写真\n"
+                Cat("体験 F1~F4") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体\n"
+                + Cat("ブラックホール 1~4") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "難易度\n"
                 + Cat("現象") + Key("Space") + "光子 発射/消去  " + Key("E") + "アインシュタインリング(A/D)  " + Key("T") + "スパゲッティ化  "
-                    + Key("J") + "ジェット  " + Key("F3") + "レンズ  " + Key("V") + "光度曲線",
+                    + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線  " + Key("O") + "観測写真\n"
+                + Cat("操作") + Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("L") + "ラベル  " + Key("I") + "パネル  "
+                    + Key("X") + "数式  " + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("P") + "性能  "
+                    + Key("F12") + "撮影  " + Key("H") + "ヘルプ",
 
-                Cat("操作") + Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("U") + "沉浸  "
-                    + Key("M") + "声音  " + Key("K") + "语言  " + Key("F12") + "截图  " + Key("F1") + "性能  " + Key("H") + "帮助\n"
-                + Cat("体验") + Key("G") + "导览(N/B)  " + Key("F5") + "黑洞诞生  " + Key("F6") + "坠落体验  " + Key("F7") + "黑洞并合\n"
-                + Cat("黑洞") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("F4") + "自旋  " + Key("F2") + "难度  "
-                    + Key("L") + "标签  " + Key("I") + "面板  " + Key("X") + "公式  " + Key("O") + "观测照片\n"
+                Cat("体验 F1~F4") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合\n"
+                + Cat("黑洞 1~4") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "难度\n"
                 + Cat("现象") + Key("Space") + "光子 发射/清除  " + Key("E") + "爱因斯坦环(A/D)  " + Key("T") + "面条化  "
-                    + Key("J") + "喷流  " + Key("F3") + "透镜  " + Key("V") + "光变曲线");
+                    + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线  " + Key("O") + "观测照片\n"
+                + Cat("操作") + Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("L") + "标签  " + Key("I") + "面板  "
+                    + Key("X") + "公式  " + Key("U") + "沉浸  " + Key("M") + "声音  " + Key("K") + "语言  " + Key("P") + "性能  "
+                    + Key("F12") + "截图  " + Key("H") + "帮助");
 
             // Size the bar to the language: preferredHeight accounts for the
             // wrapped line count at the current rect width.

@@ -17,7 +17,7 @@ namespace BlackHoleEffect
         public BlackHoleController controller;
         public DesktopControls controls;
 
-        [Tooltip("Play the birth-of-a-black-hole intro automatically when play mode starts (once per session; F5 replays it).")]
+        [Tooltip("Play the birth-of-a-black-hole intro automatically when play mode starts (once per session; F2 replays it). The startup language picker runs first.")]
         public bool autoPlayOnStart = true;
 
         public bool IsPlaying { get; private set; }
@@ -77,9 +77,21 @@ namespace BlackHoleEffect
         IEnumerator AutoPlay()
         {
             // A short beat so the scene (canvas, narration, audio) settles in.
-            yield return new WaitForSeconds(0.8f);
-            // If the user already launched something in that first moment
-            // (F6/F7/tour), don't hijack their experience.
+            yield return new WaitForSeconds(0.5f);
+            if (controls != null && controls.CinematicBusy) yield break;
+
+            // Language first — the intro narration speaks whatever is chosen.
+            bool chosen = false;
+            LanguageSelect.Show(() => chosen = true);
+            while (!chosen)
+            {
+                // If the user launched an experience via hotkey instead of
+                // picking, stop waiting and never hijack it.
+                if (controls != null && controls.CinematicBusy) yield break;
+                yield return null;
+            }
+
+            yield return new WaitForSeconds(0.4f);
             if (controls != null && controls.CinematicBusy) yield break;
             Play();
         }
