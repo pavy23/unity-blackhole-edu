@@ -9,11 +9,11 @@ namespace BlackHoleEffect
     /// <summary>
     /// Keyboard + mouse control for the desktop showcase (play mode).
     ///
-    ///   체험(F1~F4)   F1 투어 · F2 탄생 · F3 낙하 · F4 병합
-    ///   블랙홀(1~4)   1 색상 · 2 질량 · 3 스핀 · 4 난이도
-    ///   현상(알파벳)  Space 광자 · E 링(A/D) · T 조석 · J 제트 · G 렌즈 · V 광도 · O 관측
+    ///   체험(F키)     F1 투어 · F2 탄생 · F3 낙하 · F4 병합
+    ///   블랙홀(숫자)  1 색상 · 2 질량 · 3 스핀 · 4 관측사진
+    ///   현상(알파벳)  Space 광자 · E 링(A/D) · T 조석 · J 제트 · G 렌즈 · V 광도
     ///   조작(알파벳)  우클릭 회전 · 휠/W/S 줌 · R 리셋 · L 라벨 · I 패널 · X 수식
-    ///                 U 몰입 · M 소리 · K 언어 · P 성능 · F12 스냅샷 · H 도움말
+    ///                 U 몰입 · M 소리 · K 언어 · P 성능 · F12 스냅샷 · H 도움말 · C 난이도
     /// </summary>
     [RequireComponent(typeof(Camera))]
     public class DesktopControls : MonoBehaviour
@@ -204,10 +204,10 @@ namespace BlackHoleEffect
             if (wasOff)
                 ExplainCard.Show(
                     Loc.T("실제 관측과 비교", "Compare with Real Observations", "実際の観測と比較", "与真实观测对比"),
-                    Loc.T("사건의 지평선 망원경(EHT)이 촬영한 실제 블랙홀 사진과 이 시뮬레이션을 나란히 비교합니다. O를 다시 누르면 대상이 바뀝니다.",
-                          "The simulation side by side with the real Event Horizon Telescope images. Press O again to switch targets.",
-                          "イベント・ホライズン・テレスコープ(EHT)が撮影した実際の写真と、このシミュレーションを並べて比較します。Oでターゲットが切り替わります。",
-                          "把事件视界望远镜(EHT)拍摄的真实照片与本模拟并排比较。再按O可切换目标。"));
+                    Loc.T("사건의 지평선 망원경(EHT)이 촬영한 실제 블랙홀 사진과 이 시뮬레이션을 나란히 비교합니다. 4를 다시 누르면 대상이 바뀝니다.",
+                          "The simulation side by side with the real Event Horizon Telescope images. Press 4 again to switch targets.",
+                          "イベント・ホライズン・テレスコープ(EHT)が撮影した実際の写真と、このシミュレーションを並べて比較します。4でターゲットが切り替わります。",
+                          "把事件视界望远镜(EHT)拍摄的真实照片与本模拟并排比较。再按4可切换目标。"));
         }
 
         static readonly float[] SpinPresets = { 0f, 0.5f, 0.9f, 0.998f };
@@ -411,7 +411,7 @@ namespace BlackHoleEffect
             if (kb.digit1Key.wasPressedThisFrame) CycleColor();
             if (kb.digit2Key.wasPressedThisFrame) CycleMass();
             if (kb.digit3Key.wasPressedThisFrame && (binary == null || !binary.Running)) CycleSpin();
-            if (kb.digit4Key.wasPressedThisFrame) CycleDifficulty();
+            if (kb.digit4Key.wasPressedThisFrame) CycleComparison();
             // Experiences: F1–F4 (one at a time).
             if (kb.f1Key.wasPressedThisFrame && tour != null)
             {
@@ -430,7 +430,7 @@ namespace BlackHoleEffect
             if (kb.jKey.wasPressedThisFrame) ToggleJets();
             if (kb.gKey.wasPressedThisFrame) ToggleLens();
             if (kb.vKey.wasPressedThisFrame) ToggleLightCurve();
-            if (kb.oKey.wasPressedThisFrame) CycleComparison();
+            if (kb.cKey.wasPressedThisFrame) CycleDifficulty();
             if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
             if (kb.pKey.wasPressedThisFrame && hud != null) hud.show = !hud.show;
@@ -456,7 +456,7 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.Alpha1)) CycleColor();
             if (Input.GetKeyDown(KeyCode.Alpha2)) CycleMass();
             if (Input.GetKeyDown(KeyCode.Alpha3) && (binary == null || !binary.Running)) CycleSpin();
-            if (Input.GetKeyDown(KeyCode.Alpha4)) CycleDifficulty();
+            if (Input.GetKeyDown(KeyCode.Alpha4)) CycleComparison();
             // Experiences: F1–F4 (one at a time).
             if (Input.GetKeyDown(KeyCode.F1) && tour != null)
             {
@@ -475,7 +475,7 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
             if (Input.GetKeyDown(KeyCode.G)) ToggleLens();
             if (Input.GetKeyDown(KeyCode.V)) ToggleLightCurve();
-            if (Input.GetKeyDown(KeyCode.O)) CycleComparison();
+            if (Input.GetKeyDown(KeyCode.C)) CycleDifficulty();
             if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
             if (Input.GetKeyDown(KeyCode.P) && hud != null) hud.show = !hud.show;
@@ -567,37 +567,37 @@ namespace BlackHoleEffect
             // Four category rows: controls / experiences / black-hole setup /
             // phenomenon toggles — matching how the features are actually used.
             help.text = Loc.T(
-                Cat("체험 F1~F4") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합\n"
-                + Cat("블랙홀 1~4") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("3") + "스핀  " + Key("4") + "설명 난이도\n"
+                Cat("체험") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합\n"
+                + Cat("블랙홀") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("3") + "스핀  " + Key("4") + "관측사진\n"
                 + Cat("현상") + Key("Space") + "광자 발사/지우기  " + Key("E") + "아인슈타인 링(A/D)  " + Key("T") + "스파게티화  "
-                    + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선  " + Key("O") + "관측사진\n"
+                    + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선\n"
                 + Cat("조작") + Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("L") + "라벨  " + Key("I") + "패널  "
                     + Key("X") + "수식  " + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("P") + "성능  "
-                    + Key("F12") + "스냅샷  " + Key("H") + "도움말",
+                    + Key("F12") + "스냅샷  " + Key("H") + "도움말  " + Key("C") + "설명 난이도",
 
-                Cat("Experiences F1~F4") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger\n"
-                + Cat("Black hole 1~4") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "level\n"
+                Cat("Experiences") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger\n"
+                + Cat("Black hole") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "EHT photo\n"
                 + Cat("Phenomena") + Key("Space") + "photons fire/clear  " + Key("E") + "Einstein ring(A/D)  " + Key("T") + "spaghettify  "
-                    + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve  " + Key("O") + "EHT photo\n"
+                    + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve\n"
                 + Cat("Controls") + Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("L") + "labels  " + Key("I") + "panel  "
                     + Key("X") + "math  " + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("P") + "perf  "
-                    + Key("F12") + "snapshot  " + Key("H") + "help",
+                    + Key("F12") + "snapshot  " + Key("H") + "help  " + Key("C") + "level",
 
-                Cat("体験 F1~F4") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体\n"
-                + Cat("ブラックホール 1~4") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "難易度\n"
+                Cat("体験") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体\n"
+                + Cat("ブラックホール") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "観測写真\n"
                 + Cat("現象") + Key("Space") + "光子 発射/消去  " + Key("E") + "アインシュタインリング(A/D)  " + Key("T") + "スパゲッティ化  "
-                    + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線  " + Key("O") + "観測写真\n"
+                    + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線\n"
                 + Cat("操作") + Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("L") + "ラベル  " + Key("I") + "パネル  "
                     + Key("X") + "数式  " + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("P") + "性能  "
-                    + Key("F12") + "撮影  " + Key("H") + "ヘルプ",
+                    + Key("F12") + "撮影  " + Key("H") + "ヘルプ  " + Key("C") + "難易度",
 
-                Cat("体验 F1~F4") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合\n"
-                + Cat("黑洞 1~4") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "难度\n"
+                Cat("体验") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合\n"
+                + Cat("黑洞") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "观测照片\n"
                 + Cat("现象") + Key("Space") + "光子 发射/清除  " + Key("E") + "爱因斯坦环(A/D)  " + Key("T") + "面条化  "
-                    + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线  " + Key("O") + "观测照片\n"
+                    + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线\n"
                 + Cat("操作") + Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("L") + "标签  " + Key("I") + "面板  "
                     + Key("X") + "公式  " + Key("U") + "沉浸  " + Key("M") + "声音  " + Key("K") + "语言  " + Key("P") + "性能  "
-                    + Key("F12") + "截图  " + Key("H") + "帮助");
+                    + Key("F12") + "截图  " + Key("H") + "帮助  " + Key("C") + "难度");
 
             // Size the bar to the language: preferredHeight accounts for the
             // wrapped line count at the current rect width.

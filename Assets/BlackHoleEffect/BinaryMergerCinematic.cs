@@ -251,6 +251,9 @@ namespace BlackHoleEffect
                 rings[i].material = ringMat;
                 rings[i].loop = true;
                 rings[i].positionCount = RingSegs;
+                // Rounds the loop-closure joint — without corner vertices the
+                // wide stroke shows a notch where the polygon closes.
+                rings[i].numCornerVertices = 6;
                 rings[i].useWorldSpace = true;
                 rings[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 rings[i].startColor = rings[i].endColor = Color.clear;

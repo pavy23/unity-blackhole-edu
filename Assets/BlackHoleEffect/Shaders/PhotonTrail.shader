@@ -73,7 +73,10 @@ Shader "BlackHole/PhotonTrail"
                 core += exp(-across * across * _CoreSharpness * 7.0) * 0.8;
 
                 // Fade in from the tail; glow brighter toward the head.
-                float tail = smoothstep(0.0, max(_TailFade, 0.001), u);
+                // TailFade 0 disables the fade entirely: on looped lines
+                // (GW rings) the uv wrap 1 -> 0 would otherwise draw a dark
+                // radial cut across the stroke at the seam.
+                float tail = _TailFade <= 0.0015 ? 1.0 : smoothstep(0.0, _TailFade, u);
                 float head = 1.0 + _HeadBoost * smoothstep(0.72, 1.0, u) * smoothstep(1.02, 0.98, u);
 
                 // A faint pulse of energy flowing along the trajectory.
