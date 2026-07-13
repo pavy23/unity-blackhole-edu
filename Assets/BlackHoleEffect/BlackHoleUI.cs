@@ -183,7 +183,26 @@ namespace BlackHoleEffect
         {
             if (canvas != null && canvas.GetComponent<GraphicRaycaster>() == null)
                 canvas.gameObject.AddComponent<GraphicRaycaster>();
-            if (UnityEngine.EventSystems.EventSystem.current != null) return;
+
+            // Collapse to exactly ONE EventSystem. It is a DontSave object, so it
+            // survives play-mode exit; and because EventSystem.current resets to
+            // null on every domain reload, the old "current != null" guard let each
+            // play session spawn another "BlackHole EventSystem". The survivors stay
+            // active, so their InputSystemUIInputModules pile up (we saw 10) and
+            // fight over the input pipeline — UI buttons and menus stop responding.
+            // Sweep every stray copy each time we build interactive UI.
+            UnityEngine.EventSystems.EventSystem live = null;
+            foreach (var e in Resources.FindObjectsOfTypeAll<UnityEngine.EventSystems.EventSystem>())
+            {
+                if (e == null || e.gameObject.name != "BlackHole EventSystem") continue;
+                // Keep the copy that belongs to the loaded scene; discard leaked
+                // orphans (DontSave survivors from previous play sessions have no
+                // valid scene) and any accidental extra.
+                if (live == null && e.gameObject.scene.IsValid()) live = e;
+                else Object.DestroyImmediate(e.gameObject);
+            }
+            if (live != null) return;
+
             var es = new GameObject("BlackHole EventSystem") { hideFlags = HideFlags.DontSave };
             es.AddComponent<UnityEngine.EventSystems.EventSystem>();
 #if ENABLE_INPUT_SYSTEM
