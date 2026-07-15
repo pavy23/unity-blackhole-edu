@@ -402,6 +402,10 @@ namespace BlackHoleEffect.Editor
             if (cam.GetComponent<AudioSource>() == null) cam.gameObject.AddComponent<AudioSource>();
             var audioScape = cam.gameObject.AddComponent<BlackHoleAudio>();
 
+            // Fall-in rides the XR rig and leaves the looking to the passenger.
+            var fallIn = cam.gameObject.AddComponent<FallInMode>();
+            fallIn.hole = hole.transform;
+
             // Drives every toggle and attaches the theory panel; xrMode keeps its
             // hands off the tracked camera pose and the passthrough alpha.
             var controls = cam.gameObject.AddComponent<DesktopControls>();
@@ -417,6 +421,8 @@ namespace BlackHoleEffect.Editor
             controls.jets = jets;
             controls.tour = tour;
             controls.audioScape = audioScape;
+            controls.fallIn = fallIn;
+            fallIn.controls = controls;
 
             var mrControls = cam.gameObject.AddComponent<MRControls>();
             mrControls.controls = controls;

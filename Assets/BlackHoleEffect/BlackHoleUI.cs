@@ -46,6 +46,15 @@ namespace BlackHoleEffect
         /// <summary>Width of the 1920px-wide frame once hung in the room.</summary>
         public static float WorldWidthMeters = 2.6f;
 
+        /// <summary>
+        /// The MR frame's rig — null on desktop, or before any UI is built.
+        ///
+        /// Ask here rather than FindAnyObjectByType: the canvas is DontSave so it
+        /// never lands in the scene file, and DontSave objects are invisible to
+        /// the Find APIs. We hold the reference anyway.
+        /// </summary>
+        public static MRWorldCanvas WorldRig => canvas != null ? canvas.GetComponent<MRWorldCanvas>() : null;
+
         // Statics survive "Enter Play Mode without domain reload".
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()

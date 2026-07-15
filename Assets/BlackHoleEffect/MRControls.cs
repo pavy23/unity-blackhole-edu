@@ -20,6 +20,18 @@ namespace BlackHoleEffect
         readonly List<(Text label, System.Func<string> text)> localized = new();
         int locVersion = -1;
 
+        static readonly List<GameObject> menuRows = new();
+
+        /// <summary>Hide/show the hand menu with the rest of the overlays. The
+        /// narrated experiences own the view — and their captions land on the
+        /// same bottom strip the menu occupies. Static because DesktopControls
+        /// drives immersion and knows nothing about MR (matches LanguageSelect).</summary>
+        public static void SetVisible(bool on)
+        {
+            menuRows.RemoveAll(r => r == null);
+            foreach (var row in menuRows) row.SetActive(on);
+        }
+
         void Start()
         {
             if (controls == null) controls = GetComponent<DesktopControls>();
@@ -37,6 +49,7 @@ namespace BlackHoleEffect
 
         void Build()
         {
+            menuRows.Clear(); // a DontSave menu outlives play mode; never stack sessions
             var canvas = BlackHoleUI.EnsureCanvas(GetComponentInChildren<Camera>() ?? Camera.main);
 
             // Two rows hugging the bottom edge of the frame, mirroring how the
@@ -44,6 +57,7 @@ namespace BlackHoleEffect
             var row1 = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
             {
                 (() => Loc.T("가이드 투어", "Guided tour", "ガイドツアー", "导览"), ToggleTour),
+                (() => Loc.T("낙하 체험", "Fall in", "落下体験", "坠入体验"), BeginFallIn),
                 (() => Loc.T("블랙홀 병합", "Merger", "ブラックホール合体", "黑洞合并"), BeginMerger),
                 (() => Loc.T("원반 색상", "Disk colors", "円盤の色", "吸积盘颜色"), () => controls.CycleColor()),
                 (() => Loc.T("질량", "Mass", "質量", "质量"), () => controls.CycleMass()),
@@ -79,6 +93,7 @@ namespace BlackHoleEffect
                     new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, y), new Vector2(w, h), act);
                 var label = btn.GetComponentInChildren<Text>();
                 if (label != null) localized.Add((label, text));
+                menuRows.Add(btn.gameObject);
                 x += w + gap;
             }
         }
@@ -99,6 +114,11 @@ namespace BlackHoleEffect
         void BeginMerger()
         {
             if (controls.Binary != null && !controls.CinematicBusy) controls.Binary.Begin();
+        }
+
+        void BeginFallIn()
+        {
+            if (controls.fallIn != null && !controls.CinematicBusy) controls.fallIn.Begin();
         }
 
         void CycleSpin()

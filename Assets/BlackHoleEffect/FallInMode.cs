@@ -21,6 +21,24 @@ namespace BlackHoleEffect
 
         public bool IsFalling { get; private set; }
 
+        // --- MR ride mode ----------------------------------------------------
+        // In XR the headset owns the camera pose, so the fall moves the rig and
+        // leaves the looking to the passenger. Rotation is NOT ported: LookAt and
+        // the tilt schedule would fight head tracking, and winning that fight is
+        // worse than losing it. The stages still frame the hole because the rig
+        // travels straight down the radial line — and the shadow grows to fill
+        // the sky either way.
+        //
+        // The trip is gentler than it sounds: 24 Rs is only 2.9 m at the room-
+        // scale Rs of 12 cm, so the whole descent averages ~0.2 m/s. Schwarzschild
+        // is scale-free, so the apparent size matches the desktop exactly.
+        Unity.XR.CoreUtils.XROrigin xrOrigin;
+        MRSpaceWindow spaceWindow;
+        Vector3 savedRigPos;
+        Quaternion savedRigRot;
+
+        bool XRRide => xrOrigin != null;
+
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
@@ -28,17 +46,41 @@ namespace BlackHoleEffect
         Vector3 savedPos;
         Quaternion savedRot;
         Image skyImage;
+        Transform skyBillboard;   // MR only: the circle's world anchor behind the viewer
         Image blackOverlay;
         Texture2D skyTex;
         float savedStarDensity, savedNebula;
+        Material sky;                     // RenderSettings.skybox — kept in step with the quad's stars
+        float savedSkyStar, savedSkyNebula;
         BlackHoleController holeController;
         float spiralAz;   // cumulative background drift, deg (matches the ambient orbit)
         float driftRate;  // deg/s — set from the ambient CinematicOrbit so the fall is unified with it
+        Vector3 fallDir;  // live outward radial — where the outside universe still is
 
         public void Begin()
         {
             if (!Application.isPlaying || IsFalling || hole == null) return;
+            xrOrigin = FindAnyObjectByType<Unity.XR.CoreUtils.XROrigin>();
+            spaceWindow = FindAnyObjectByType<MRSpaceWindow>();
             routine = StartCoroutine(Run());
+        }
+
+        /// <summary>
+        /// Puts the viewer at a world point. On desktop that means the camera,
+        /// aimed at the hole with the authored tilt. In XR it means the rig:
+        /// MoveCameraToWorldLocation compensates for where the head currently
+        /// sits inside it, and the aim is the passenger's business.
+        /// </summary>
+        void PlaceViewer(Vector3 worldPos, float tilt = 0f)
+        {
+            if (XRRide)
+            {
+                xrOrigin.MoveCameraToWorldLocation(worldPos);
+                return;
+            }
+            transform.position = worldPos;
+            transform.LookAt(hole.position);
+            if (tilt != 0f) transform.Rotate(-tilt, 0f, 0f);
         }
 
         void Update()
@@ -60,9 +102,22 @@ namespace BlackHoleEffect
             if (routine != null) StopCoroutine(routine);
             NarrationManager.Instance.Stop();
             DestroySkyDisk();
+            RestoreViewer();
+            if (spaceWindow != null) spaceWindow.CloseNow();
+            Finish();
+        }
+
+        /// <summary>Puts the viewer back where the fall found them — the rig in
+        /// XR (the camera pose there is the headset's, not ours to restore).</summary>
+        void RestoreViewer()
+        {
+            if (XRRide)
+            {
+                xrOrigin.transform.SetPositionAndRotation(savedRigPos, savedRigRot);
+                return;
+            }
             transform.position = savedPos;
             transform.rotation = savedRot;
-            Finish();
         }
 
         void Finish()
@@ -82,9 +137,21 @@ namespace BlackHoleEffect
                 holeController.nebulaHaze = savedNebula;
                 holeController.Apply();
             }
+            // The skybox is a shared asset — hand its density back whatever the
+            // ending. (Safe after MRSpaceWindow unassigns it: we hold the material.)
+            RestoreSky();
+            SetFrameFollowsViewer(false); // back onto the hole — both endings pass here
             if (controls != null) { controls.SetImmersive(false); controls.suspendCamera = false; }
             if (orbit != null) orbit.enabled = true; // the drift never stays off
             IsFalling = false;
+        }
+
+        /// <summary>MR: park the shared UI frame in front of the viewer for the
+        /// ride, or hand it back to the hole afterwards. No-op on desktop.</summary>
+        void SetFrameFollowsViewer(bool on)
+        {
+            var frame = BlackHoleUI.WorldRig;
+            if (frame != null) frame.followViewer = on;
         }
 
         /// <summary>Moves the camera from rFrom to rTo (in Rs) over dur
@@ -119,11 +186,10 @@ namespace BlackHoleEffect
                 // BEFORE LookAt so the hole stays centered.
                 spiralAz += driftRate * Time.deltaTime;
                 Vector3 dirNow = Quaternion.AngleAxis(spiralAz, Vector3.up) * dir;
-                transform.position = hole.position + dirNow * (r * rs);
-                transform.LookAt(hole.position);
                 float tilt = Mathf.Lerp(tiltFrom, tiltTo, Mathf.SmoothStep(0f, 1f, u));
                 tilt = Mathf.Min(tilt, SafeTiltCap(r)); // never let the frame run off the quad rim
-                if (tilt != 0f) transform.Rotate(-tilt, 0f, 0f);
+                PlaceViewer(hole.position + dirNow * (r * rs), tilt);
+                fallDir = dirNow;
                 UpdateStarDensity(r);
                 if (captionFor != null) Caption(captionFor(r));
                 onFrame?.Invoke(r);
@@ -143,6 +209,35 @@ namespace BlackHoleEffect
             holeController.starDensity = Mathf.Lerp(savedStarDensity, 0.55f, k);
             holeController.nebulaHaze = Mathf.Lerp(savedNebula, 0.35f, k);
             holeController.Apply();
+            // The skybox behind the quad carries its own star density, so boosting
+            // only the quad makes its rectangle show up as a denser patch. The
+            // desktop never caught this — at FOV 32° locked on the hole, the quad
+            // covers the whole frame past r≈8. In MR the view is wide and the head
+            // is free, so the rim is right there. Same fix as the merger.
+            if (sky != null && sky.HasProperty("_StarDensity"))
+            {
+                sky.SetFloat("_StarDensity", holeController.starDensity);
+                sky.SetFloat("_NebulaIntensity", holeController.nebulaHaze);
+            }
+        }
+
+        void RestoreSky()
+        {
+            if (sky != null && sky.HasProperty("_StarDensity"))
+            {
+                sky.SetFloat("_StarDensity", savedSkyStar);
+                sky.SetFloat("_NebulaIntensity", savedSkyNebula);
+            }
+        }
+
+        /// <summary>Leaving play mode mid-fall kills the coroutine before Finish
+        /// can run, and the boost would stay baked into the shared skybox asset —
+        /// which has no [ExecuteAlways] owner to rewrite it. See the same guard on
+        /// BinaryMergerCinematic.</summary>
+        void OnDisable()
+        {
+            if (!IsFalling) return;
+            RestoreSky();
         }
 
         /// <summary>Highest safe upward pitch (deg) at radius r: past the
@@ -172,12 +267,10 @@ namespace BlackHoleEffect
             for (float t = 0f; t < dur; t += Time.deltaTime)
             {
                 float u = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(t / dur));
-                transform.position = hole.position + Vector3.Slerp(nFrom, dirTo, u) * Mathf.Lerp(rFrom, rTo, u);
-                transform.LookAt(hole.position);
+                PlaceViewer(hole.position + Vector3.Slerp(nFrom, dirTo, u) * Mathf.Lerp(rFrom, rTo, u));
                 yield return null;
             }
-            transform.position = hole.position + dirTo * rTo;
-            transform.LookAt(hole.position);
+            PlaceViewer(hole.position + dirTo * rTo);
         }
 
         IEnumerator Run()
@@ -199,7 +292,27 @@ namespace BlackHoleEffect
 
             savedPos = transform.position;
             savedRot = transform.rotation;
+            if (XRRide)
+            {
+                savedRigPos = xrOrigin.transform.position;
+                savedRigRot = xrOrigin.transform.rotation;
+            }
             float rs = hole.lossyScale.x;
+
+            // Nothing to fall through in MR: the shader draws no starfield there
+            // and cannot sample passthrough, so borrow the room for the ride.
+            if (spaceWindow != null) yield return spaceWindow.Open(1.2f);
+            // Read the sky AFTER that swap — in MR the starfield only becomes the
+            // skybox once the room is gone.
+            sky = RenderSettings.skybox;
+            if (sky != null && sky.HasProperty("_StarDensity"))
+            {
+                savedSkyStar = sky.GetFloat("_StarDensity");
+                savedSkyNebula = sky.GetFloat("_NebulaIntensity");
+            }
+            // The UI frame normally hangs on the hole — which we are about to fly
+            // into. Let it ride in front of the passenger for the trip instead.
+            SetFrameFollowsViewer(true);
 
             // Background drift is unified with the ambient orbit the fall
             // interrupts — same rate, so it never feels faster than the
@@ -316,12 +429,15 @@ namespace BlackHoleEffect
             yield return new WaitForSeconds(2.2f);
             EnsureSkyImage();
             skyImage.gameObject.SetActive(true);
+            if (skyBillboard != null) skyBillboard.gameObject.SetActive(true); // a repeat fall re-arms it
+            PlaceSkyBillboard();
             for (float t = 0f; t < 1.1f; t += Time.deltaTime)
             {
                 float k = t / 1.1f;
                 float size = Mathf.Lerp(24f, 300f, Mathf.SmoothStep(0f, 1f, k));
                 skyImage.rectTransform.sizeDelta = new Vector2(size, size);
                 skyImage.color = new Color(1f, 0.98f, 0.92f, 0.9f * k);
+                PlaceSkyBillboard();
                 yield return null;
             }
             yield return new WaitForSeconds(Mathf.Max(0f, len - 1.6f - 2.2f - 1.1f));
@@ -345,6 +461,7 @@ namespace BlackHoleEffect
                 Color cs = Color.Lerp(new Color(1f, 0.98f, 0.92f), new Color(0.45f, 0.65f, 1f), k);
                 cs.a = 0.9f;
                 skyImage.color = cs;
+                PlaceSkyBillboard();
                 yield return null;
             }
 
@@ -365,6 +482,7 @@ namespace BlackHoleEffect
                 Color c = Color.Lerp(new Color(0.45f, 0.65f, 1f), new Color(0.25f, 0.35f, 0.85f), k);
                 c.a = 0.9f * Mathf.Pow(1f - k, 1.3f);
                 skyImage.color = c;
+                PlaceSkyBillboard();
                 yield return null;
             }
             skyImage.gameObject.SetActive(false);
@@ -376,8 +494,10 @@ namespace BlackHoleEffect
                 "体验结束——回到原来的位置。"));
             yield return new WaitForSeconds(1.8f);
 
-            transform.position = savedPos;
-            transform.rotation = savedRot;
+            RestoreViewer();
+            // Give the room back only after the viewer is home, so the fade
+            // covers the jump instead of landing on top of it.
+            if (spaceWindow != null) yield return spaceWindow.Close(1.2f);
             Finish();
         }
 
@@ -388,17 +508,15 @@ namespace BlackHoleEffect
         void EnsureBlackOverlay()
         {
             if (blackOverlay != null) return;
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            var go = new GameObject("FallIn Black") { hideFlags = HideFlags.DontSave };
-            go.transform.SetParent(canvas.transform, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-            blackOverlay = go.AddComponent<Image>();
+            // Sorting order 90 puts it under the UI frame (100) but still over
+            // the raymarch quad, which is transparent-queued and writes no depth
+            // — so draw order here is decided by sorting, not by distance, and
+            // the captions and stop button survive the blackout.
+            blackOverlay = BlackHoleUI.MakeFullViewOverlay(GetComponent<Camera>(), "FallIn Black", 90);
+            if (blackOverlay == null) return;
             blackOverlay.color = new Color(0f, 0f, 0f, 0f);
-            blackOverlay.raycastTarget = false; // never block the Stop button
-            go.transform.SetSiblingIndex(0);     // very back of the canvas
+            // Desktop shares one canvas, where order is sibling order: to the back.
+            if (!BlackHoleUI.WorldSpace) blackOverlay.transform.SetSiblingIndex(0);
         }
 
         void SetBlack(float a)
@@ -412,27 +530,69 @@ namespace BlackHoleEffect
         void EnsureSkyImage()
         {
             if (skyImage != null) return;
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
             var go = new GameObject("FallIn Sky") { hideFlags = HideFlags.DontSave };
-            go.transform.SetParent(canvas.transform, false);
-            // Draw order (back → front): black overlay, looking-back circle,
-            // caption/stop (created earlier, higher indices). The circle must
-            // sit ABOVE the opaque black overlay or it would be hidden.
-            if (blackOverlay != null) { blackOverlay.transform.SetSiblingIndex(0); go.transform.SetSiblingIndex(1); }
-            else go.transform.SetSiblingIndex(0);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = Vector2.zero;
-            skyImage = go.AddComponent<Image>();
+
+            if (BlackHoleUI.WorldSpace)
+            {
+                // MR earns the caption its literal meaning: the outside universe
+                // is left in the direction we fell FROM, so the circle sits out
+                // there in the world and the passenger has to turn around to find
+                // it. Sorts over the blackout (90); when it is behind the viewer
+                // it is simply outside the frustum, so nothing leaks forward.
+                var cam = GetComponent<Camera>();
+                var canvas = go.AddComponent<Canvas>();
+                canvas.renderMode = RenderMode.WorldSpace;
+                canvas.worldCamera = cam;
+                canvas.sortingOrder = 100;
+                var crt = (RectTransform)go.transform;
+                crt.sizeDelta = new Vector2(1000f, 1000f);
+                crt.localScale = Vector3.one * 0.001f; // 300 "px" ≈ 0.3 m at 1.5 m ≈ the desktop's 9°
+                skyBillboard = go.transform;
+
+                var child = new GameObject("Disk") { hideFlags = HideFlags.DontSave };
+                child.transform.SetParent(go.transform, false);
+                var rt2 = child.AddComponent<RectTransform>();
+                rt2.anchorMin = rt2.anchorMax = rt2.pivot = new Vector2(0.5f, 0.5f);
+                rt2.anchoredPosition = Vector2.zero;
+                skyImage = child.AddComponent<Image>();
+            }
+            else
+            {
+                var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
+                go.transform.SetParent(canvas.transform, false);
+                // Draw order (back → front): black overlay, looking-back circle,
+                // caption/stop (created earlier, higher indices). The circle must
+                // sit ABOVE the opaque black overlay or it would be hidden.
+                if (blackOverlay != null) { blackOverlay.transform.SetSiblingIndex(0); go.transform.SetSiblingIndex(1); }
+                else go.transform.SetSiblingIndex(0);
+                var rt = go.AddComponent<RectTransform>();
+                rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                rt.anchoredPosition = Vector2.zero;
+                skyImage = go.AddComponent<Image>();
+            }
+
             skyImage.raycastTarget = false;
             var tex = SkyTexture();
             skyImage.sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100f);
         }
 
+        /// <summary>MR: hold the circle out along the outward radial (the way we
+        /// came) and keep it facing the viewer.</summary>
+        void PlaceSkyBillboard()
+        {
+            if (skyBillboard == null) return;
+            var cam = GetComponent<Camera>();
+            if (cam == null || fallDir == Vector3.zero) return;
+            skyBillboard.position = cam.transform.position + fallDir * 1.5f;
+            skyBillboard.rotation = Quaternion.LookRotation(skyBillboard.position - cam.transform.position, Vector3.up);
+        }
+
         void DestroySkyDisk()
         {
             if (skyImage != null) skyImage.gameObject.SetActive(false);
+            // MR keeps the circle on its own world anchor, one level up.
+            if (skyBillboard != null) skyBillboard.gameObject.SetActive(false);
         }
 
         /// <summary>Soft "compressed starry sky" disk: a bright core with a

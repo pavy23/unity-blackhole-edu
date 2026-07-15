@@ -166,6 +166,21 @@ namespace BlackHoleEffect
             }
         }
 
+        /// <summary>
+        /// Leaving play mode mid-cinematic kills the coroutine where it stands,
+        /// and Finish/Abort never run. The controller rewrites the hole's material
+        /// in edit mode ([ExecuteAlways]), so that one heals itself — but the
+        /// skybox is a shared asset with no such owner, and the boost would stay
+        /// baked in the .mat. Worse, it compounds: the next run reads the boosted
+        /// value as the exploration one to restore to.
+        /// </summary>
+        void OnDisable()
+        {
+            if (!Running) return;
+            RestoreSky();
+            if (mat != null) mat.SetFloat(BinaryOnId, 0f);
+        }
+
         void DestroyRings()
         {
             if (rings != null)

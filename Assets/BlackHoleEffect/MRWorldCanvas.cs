@@ -18,6 +18,11 @@ namespace BlackHoleEffect
         public Transform target;
         public Camera viewer;
 
+        [Tooltip("Ignore the target and ride in front of the viewer. The fall-in " +
+                 "flies into the hole, and a frame centred there ends up inside " +
+                 "the viewer's face — during the ride the panels follow instead.")]
+        public bool followViewer;
+
         [Tooltip("Distance in front of the viewer when there is no target.")]
         public float fallbackDistance = 2f;
 
@@ -35,13 +40,13 @@ namespace BlackHoleEffect
             var cam = viewer != null ? viewer : Camera.main;
             if (cam == null) return;
 
-            if (target == null)
+            if (target == null && !followViewer)
             {
                 var hole = FindAnyObjectByType<BlackHoleController>();
                 if (hole != null) target = hole.transform;
             }
 
-            transform.position = target != null
+            transform.position = target != null && !followViewer
                 ? target.position
                 : cam.transform.position + cam.transform.forward * fallbackDistance;
 

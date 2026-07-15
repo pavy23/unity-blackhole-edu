@@ -277,6 +277,8 @@ namespace BlackHoleEffect
             if (theory != null && on) theory.SetVisible(false);
             // Cinematics put their skip/stop button in the same corner.
             LanguageSelect.SetVisible(!on);
+            // MR's hand menu shares the bottom strip with the captions.
+            MRControls.SetVisible(!on);
         }
 
         void Start()
