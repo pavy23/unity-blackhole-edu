@@ -97,12 +97,17 @@ namespace BlackHoleEffect
 
         const int SampleRate = 48000;
 
+        /// <summary>MR only: swaps the room for a starfield while we run, so the
+        /// gas-free holes have something to lens. Null on desktop.</summary>
+        MRSpaceWindow spaceWindow;
+
         public void Begin()
         {
             if (!Application.isPlaying || Running || controller == null) return;
             var r = controller.GetComponent<Renderer>();
             if (r == null || r.sharedMaterial == null) return;
             mat = r.sharedMaterial;
+            spaceWindow = FindAnyObjectByType<MRSpaceWindow>();
             routine = StartCoroutine(Run());
         }
 
@@ -137,6 +142,10 @@ namespace BlackHoleEffect
             controller.Apply();
             RestoreSky();
             if (mat != null) mat.SetFloat(BinaryOnId, 0f);
+            // No fade on abort: the user asked to be out, and leaving this
+            // undone would strand the headset in a starfield with passthrough
+            // switched off in the material asset.
+            if (spaceWindow != null) spaceWindow.CloseNow();
             Finish();
         }
 
@@ -186,6 +195,10 @@ namespace BlackHoleEffect
             Running = true;
             if (controls != null) controls.SetImmersive(true);
             ShowStop(true);
+
+            // In MR, trade the room for space before anything else: the disk is
+            // about to disperse, and a bare hole against passthrough is invisible.
+            if (spaceWindow != null) yield return spaceWindow.Open(1.2f);
 
             // --- save the exploration state -------------------------------
             savedSpin = controller.spin;
@@ -265,6 +278,7 @@ namespace BlackHoleEffect
                 float u = Mathf.Clamp01(t / T);
                 separation = mergeSep + (startSeparation - mergeSep) * Mathf.Pow(1f - u, 0.25f);
                 StepOrbit(Time.deltaTime);
+                PulseWaves(u, theta);
 
                 // Pre-merger flash swell: over the last 0.3 s of the inspiral
                 // the flash brightens to fully opaque, so the fast, tight final
@@ -284,6 +298,7 @@ namespace BlackHoleEffect
             // --- Merger ----------------------------------------------------
             ringdown = true;                            // chirp → damped ringdown tone
             mat.SetFloat(BinaryOnId, 0f);
+            SendHaptics(1f, 0.3f);                      // the strain peak, felt in the hands
 
             // The remnant is its FINAL size from the moment of merging — a
             // merged black hole does not inflate afterwards. The apparent
@@ -430,7 +445,37 @@ namespace BlackHoleEffect
             RestoreSky();
             mat.SetFloat(BinaryOnId, 0f);
 
+            // Hand the room back only once the disk has settled again, so the
+            // last thing seen in space is the remnant with its disk, not a cut.
+            if (spaceWindow != null) yield return spaceWindow.Close(1.2f);
+
             Finish();
+        }
+
+        /// <summary>
+        /// Gravitational waves you can feel: the controllers pulse twice per orbit
+        /// (the quadrupole radiates at 2×the orbital frequency) and grow toward the
+        /// merger. Inherited from the old MR-only merger demo — on desktop there is
+        /// no haptic device and every call is a no-op.
+        /// </summary>
+        void PulseWaves(float u, float orbitPhase)
+        {
+            if (Mathf.Sin(orbitPhase * 2f) <= 0.6f) return;
+            float amplitude = Mathf.Clamp01(0.08f + Mathf.Pow(u, 2.5f));
+            SendHaptics(amplitude, 0.04f);
+        }
+
+        static void SendHaptics(float amplitude, float duration)
+        {
+            SendTo(UnityEngine.XR.XRNode.LeftHand, amplitude, duration);
+            SendTo(UnityEngine.XR.XRNode.RightHand, amplitude, duration);
+        }
+
+        static void SendTo(UnityEngine.XR.XRNode node, float amplitude, float duration)
+        {
+            var device = UnityEngine.XR.InputDevices.GetDeviceAtXRNode(node);
+            if (device.isValid && device.TryGetHapticCapabilities(out var caps) && caps.supportsImpulse)
+                device.SendHapticImpulse(0, amplitude, duration);
         }
 
         void StepOrbit(float dt)
@@ -515,16 +560,9 @@ namespace BlackHoleEffect
         void EnsureFlash()
         {
             if (flash != null) return;
-            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
-            var go = new GameObject("Merger Flash") { hideFlags = HideFlags.DontSave };
-            go.transform.SetParent(canvas.transform, false);
-            var rt = go.AddComponent<RectTransform>();
-            rt.anchorMin = Vector2.zero;
-            rt.anchorMax = Vector2.one;
-            rt.offsetMin = rt.offsetMax = Vector2.zero;
-            flash = go.AddComponent<Image>();
-            flash.color = Color.clear;
-            flash.raycastTarget = false;
+            // Must cover the whole view: the flash is what hides the flip from two
+            // holes to one, and anything it fails to cover shows the jump.
+            flash = BlackHoleUI.MakeFullViewOverlay(GetComponent<Camera>(), "Merger Flash");
         }
     }
 }

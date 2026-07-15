@@ -39,8 +39,16 @@ namespace BlackHoleEffect
         [Tooltip("Set by cinematic modes (fall-in) to take over the camera.")]
         public bool suspendCamera;
 
+        [Tooltip("MR: the headset owns the camera pose and the compositor owns the " +
+                 "alpha channel. Disables orbit/zoom/reset and post-processing; every " +
+                 "other toggle (and the keyboard, handy for editor testing) still works.")]
+        public bool xrMode;
+
         TheoryPanel theory;
         BinaryMergerCinematic binary;
+
+        public TheoryPanel Theory => theory;
+        public BinaryMergerCinematic Binary => binary;
 
         /// <summary>True while any narrated experience owns the stage —
         /// used to block competing cinematics (and the intro autoplay).</summary>
@@ -50,7 +58,7 @@ namespace BlackHoleEffect
             (binary != null && binary.Running) ||
             (tour != null && tour.Running);
 
-        void CycleDifficulty()
+        public void CycleDifficulty()
         {
             if (annotations == null) return;
             annotations.difficulty = (BlackHoleAnnotations.Difficulty)
@@ -77,7 +85,7 @@ namespace BlackHoleEffect
             ShowToast(Loc.T("난이도: ", "Level: ", "難易度: ", "难度: ") + name);
         }
 
-        void ToggleLanguage()
+        public void ToggleLanguage()
         {
             Loc.Cycle();
             RefreshLanguage();
@@ -95,7 +103,7 @@ namespace BlackHoleEffect
 
         // ---- one-key preset cycles (1 = disk colors, 2 = mass) ----------
 
-        void CycleColor()
+        public void CycleColor()
         {
             if (controller == null) return;
             var next = controller.preset switch
@@ -118,7 +126,7 @@ namespace BlackHoleEffect
 
         int massIndex = 1; // scene starts as Sagittarius A*
 
-        void CycleMass()
+        public void CycleMass()
         {
             if (panel == null) return;
             massIndex = (massIndex + 1) % 3;
@@ -129,7 +137,7 @@ namespace BlackHoleEffect
 
         // ---- phenomenon toggles: every ON shows an explanation card ------
 
-        void ToggleEinstein()
+        public void ToggleEinstein()
         {
             if (einsteinDemo == null) return;
             einsteinDemo.active = !einsteinDemo.active;
@@ -142,7 +150,7 @@ namespace BlackHoleEffect
                       "黑洞后方的星光被分成两个像。当恰好对齐时，光从四面八方弯过来，成为完整的光环。可用A/D亲自移动星星。"));
         }
 
-        void ToggleSpaghetti()
+        public void ToggleSpaghetti()
         {
             if (spaghetti == null) return;
             spaghetti.active = !spaghetti.active;
@@ -155,7 +163,7 @@ namespace BlackHoleEffect
                       "恒星两端受到的引力差——潮汐力——把它像面条一样拉长撕裂。碎片分成两股：一半落入黑洞，一半被甩出去。"));
         }
 
-        void ToggleJets()
+        public void ToggleJets()
         {
             if (jets == null) return;
             jets.active = !jets.active;
@@ -168,7 +176,7 @@ namespace BlackHoleEffect
                       "并非所有下落的物质都被吞掉。一部分被旋转磁场卷起，从两极以接近光速喷出——真实的喷流可延伸数千光年。"));
         }
 
-        void ToggleLightCurve()
+        public void ToggleLightCurve()
         {
             if (lightCurve == null) return;
             lightCurve.show = !lightCurve.show;
@@ -181,7 +189,7 @@ namespace BlackHoleEffect
                       "记录吸积盘总亮度随时间变化的图线——真实望远镜正是这样'看'黑洞的。试试按T撕裂恒星：曲线上会出现潮汐瓦解耀发。"));
         }
 
-        void ToggleLens()
+        public void ToggleLens()
         {
             if (lensDemo == null) return;
             bool wasOn = lensDemo.Active;
@@ -195,7 +203,7 @@ namespace BlackHoleEffect
                       "暂时关闭吸积盘，只看背景星光如何被引力扭曲。观察明亮光源左右移动时，像被分裂、拉伸、连成光环。"));
         }
 
-        void CycleComparison()
+        public void CycleComparison()
         {
             if (comparison == null) return;
             bool wasOff = !comparison.show;
@@ -212,7 +220,7 @@ namespace BlackHoleEffect
 
         static readonly float[] SpinPresets = { 0f, 0.5f, 0.9f, 0.998f };
 
-        void CycleSpin()
+        public void CycleSpin()
         {
             if (controller == null) return;
             // Advance to the next preset above the current value (wraps to 0).
@@ -306,6 +314,9 @@ namespace BlackHoleEffect
         void SetupPostFX()
         {
             if (!Application.isPlaying) return;
+            // Passthrough composites on the alpha channel, and post-processing
+            // overwrites it — enabling this in MR punches the room out of view.
+            if (xrMode) return;
             // DontSave objects survive play-mode exit in the editor — sweep
             // strays so volumes never stack across sessions.
             foreach (var v in Resources.FindObjectsOfTypeAll<UnityEngine.Rendering.Volume>())
@@ -345,7 +356,7 @@ namespace BlackHoleEffect
 
         void ReadMouse()
         {
-            if (target == null || suspendCamera) return;
+            if (target == null || suspendCamera || xrMode) return;
             float dx = 0f, dy = 0f, scroll = 0f;
             bool dragging = false, zoomIn = false, zoomOut = false;
 #if ENABLE_INPUT_SYSTEM
@@ -542,6 +553,9 @@ namespace BlackHoleEffect
 
         void ResetCamera()
         {
+            // In MR the pose comes from head tracking; writing it here would be
+            // overwritten next frame at best, and fight the tracking at worst.
+            if (xrMode) return;
             transform.position = initialPos;
             transform.rotation = initialRot;
             if (autoOrbit != null) autoOrbit.enabled = true;
@@ -549,6 +563,9 @@ namespace BlackHoleEffect
 
         void BuildHelp()
         {
+            // The bar is a keyboard legend, and an MR visitor has no keyboard —
+            // MRControls puts its button menu along this same bottom strip.
+            if (xrMode) return;
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
             // Two compact rows + wrap; the bar height then hugs whatever the
             // current language actually needs (see UpdateHelpText).

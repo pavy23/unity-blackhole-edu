@@ -223,8 +223,19 @@ namespace BlackHoleEffect.Editor
             }
         }
 
-        const string HandsRigPrefabPath =
-            "Assets/Samples/XR Interaction Toolkit/3.4.1/Hands Interaction Demo/Prefabs/XR Origin Hands (XR Rig).prefab";
+        /// <summary>Finds the XRI hands rig whatever sample version is imported —
+        /// the folder is named after the package version at import time, so a
+        /// hardcoded path silently degrades to a bare camera after any upgrade.</summary>
+        static GameObject FindHandsRigPrefab()
+        {
+            foreach (var guid in AssetDatabase.FindAssets("\"XR Origin Hands\" t:GameObject"))
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                if (path.Contains("/Samples/XR Interaction Toolkit/") && path.EndsWith(".prefab"))
+                    return AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            }
+            return null;
+        }
 
         [MenuItem("Tools/Black Hole/Create MR Scene (Passthrough)")]
         public static void BuildMR()
@@ -245,7 +256,7 @@ namespace BlackHoleEffect.Editor
 
             // --- XR rig (hands + controllers) ------------------------------------
             Camera cam;
-            var rigPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(HandsRigPrefabPath);
+            var rigPrefab = FindHandsRigPrefab();
             if (rigPrefab != null)
             {
                 var rig = (GameObject)PrefabUtility.InstantiatePrefab(rigPrefab);
@@ -291,7 +302,12 @@ namespace BlackHoleEffect.Editor
             var ctrl = hole.AddComponent<BlackHoleController>();
             ctrl.quality = BlackHoleController.QualityProfile.QuestOptimized;
             ctrl.raymarchSteps = 96;
-            hole.AddComponent<BlackHoleAnnotations>();
+            // AddComponent already ran OnEnable with the desktop defaults and wrote
+            // them to the shared material asset. Assigning fields from code does not
+            // fire OnValidate, so without this the .mat keeps 220 steps and the
+            // Quest budget silently reads as if it were never set.
+            ctrl.Apply();
+            var annotations = hole.AddComponent<BlackHoleAnnotations>();
 
             // --- Hand grab: move with one hand, scale with two -------------------
             var sphere = hole.AddComponent<SphereCollider>();
@@ -350,11 +366,70 @@ namespace BlackHoleEffect.Editor
                 matter.flare = flare;
             }
 
-            // --- Binary merger loop (gravitational-wave haptics) ------------------
-            var mergerGO = new GameObject("Binary Merger Demo");
-            var merger = mergerGO.AddComponent<BinaryMergerDemo>();
-            merger.holeA = hole.transform;
-            merger.flare = flare;
+            // --- Educational layer -----------------------------------------------
+            // Same components as the desktop showcase. Their UI needs no MR port:
+            // BlackHoleUI hangs the shared canvas in the room when it sees an XR
+            // rig, so the panels frame the real hole instead of the screen.
+            var einstein = hole.AddComponent<EinsteinRingDemo>();
+            var spaghetti = hole.AddComponent<SpaghettificationDemo>();
+            spaghetti.blackHole = hole.transform;
+            var jets = hole.AddComponent<RelativisticJets>();
+
+            var launcherGO = new GameObject("Photon Launcher");
+            var launcher = launcherGO.AddComponent<PhotonLauncher>();
+            launcher.blackHole = hole.transform;
+
+            var panelGO = new GameObject("Physics Panel");
+            panelGO.transform.SetParent(cam.transform, false);
+            var panel = panelGO.AddComponent<BlackHolePhysicsPanel>();
+            panel.controller = ctrl;
+
+            var comparisonGO = new GameObject("Observation Comparison");
+            comparisonGO.transform.SetParent(cam.transform, false);
+            var comparison = comparisonGO.AddComponent<ObservationComparison>();
+            comparison.observationImage = AssetDatabase.LoadAssetAtPath<Texture2D>(Root + "/Textures/EHT_M87.jpg");
+
+            var tour = cam.gameObject.AddComponent<GuidedTour>();
+            tour.annotations = annotations;
+            tour.panel = panel;
+            tour.einsteinDemo = einstein;
+            tour.launcher = launcher;
+            tour.spaghetti = spaghetti;
+            tour.jets = jets;
+            tour.comparison = comparison;
+
+            if (cam.GetComponent<AudioListener>() == null) cam.gameObject.AddComponent<AudioListener>();
+            if (cam.GetComponent<AudioSource>() == null) cam.gameObject.AddComponent<AudioSource>();
+            var audioScape = cam.gameObject.AddComponent<BlackHoleAudio>();
+
+            // Drives every toggle and attaches the theory panel; xrMode keeps its
+            // hands off the tracked camera pose and the passthrough alpha.
+            var controls = cam.gameObject.AddComponent<DesktopControls>();
+            controls.xrMode = true;
+            controls.target = hole.transform;
+            controls.controller = ctrl;
+            controls.panel = panel;
+            controls.annotations = annotations;
+            controls.launcher = launcher;
+            controls.einsteinDemo = einstein;
+            controls.comparison = comparison;
+            controls.spaghetti = spaghetti;
+            controls.jets = jets;
+            controls.tour = tour;
+            controls.audioScape = audioScape;
+
+            var mrControls = cam.gameObject.AddComponent<MRControls>();
+            mrControls.controls = controls;
+            mrControls.hole = hole.transform;
+
+            // The merger (BinaryMergerCinematic, attached by DesktopControls) is
+            // gas-free, and a gas-free hole has nothing to lens against
+            // passthrough — so it borrows the room for the duration.
+            var space = cam.gameObject.AddComponent<MRSpaceWindow>();
+            space.controller = ctrl;
+            space.viewer = cam;
+            space.starfield = AssetDatabase.LoadAssetAtPath<Material>(Root + "/Materials/StarfieldSkybox.mat");
+            space.passthroughMRMode = 1f;
 
             // --- Palm-summoned miniature ------------------------------------------
             var palmMat = SaveMaterial("BlackHoleRaymarchPalm", holeShader);

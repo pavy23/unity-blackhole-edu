@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.UI;
+using UnityEngine.XR.Interaction.Toolkit.UI;
 
 namespace BlackHoleEffect
 {
@@ -8,9 +9,51 @@ namespace BlackHoleEffect
     /// canvas (CanvasScaler handles any aspect ratio), procedurally generated
     /// rounded-rect / circle sprites, and a dark + gold theme that matches the
     /// black hole. Everything is DontSave — nothing pollutes the scene file.
+    ///
+    /// In MR the same canvas switches to world space (see <see cref="WorldSpace"/>).
+    /// The layout needs no changes: it is authored against a 1920x1080 frame with
+    /// the hole centred and panels hugging the edges, so hanging that frame in the
+    /// room around the real hole leaves the middle transparent for passthrough and
+    /// arranges the panels around the object.
     /// </summary>
     public static class BlackHoleUI
     {
+        /// <summary>
+        /// Build UI as a world-space canvas (MR) instead of a screen overlay.
+        ///
+        /// Resolved on first use rather than assigned at startup: two UI owners
+        /// (the physics panel and the observation comparison) build from OnEnable,
+        /// which interleaves with everyone else's Awake, so no script can reliably
+        /// set a flag "first". An XR rig in the scene is the honest signal, and by
+        /// the time any UI is built the scene is fully loaded.
+        /// </summary>
+        public static bool WorldSpace
+        {
+            get
+            {
+                if (worldSpaceOverride.HasValue) return worldSpaceOverride.Value;
+                // Deliberately not cached: the editor swaps scenes without a domain
+                // reload, so a result computed in the desktop scene would follow us
+                // into the MR one. Only canvas and button construction read this,
+                // so the scan cost never lands in a frame loop.
+                return Object.FindAnyObjectByType<Unity.XR.CoreUtils.XROrigin>() != null;
+            }
+            set => worldSpaceOverride = value;
+        }
+
+        static bool? worldSpaceOverride;
+
+        /// <summary>Width of the 1920px-wide frame once hung in the room.</summary>
+        public static float WorldWidthMeters = 2.6f;
+
+        // Statics survive "Enter Play Mode without domain reload".
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        static void ResetStatics()
+        {
+            worldSpaceOverride = null;
+            canvas = null;
+        }
+
         // Theme
         public static readonly Color PanelBg = new Color(0.03f, 0.045f, 0.075f, 0.86f);
         public static readonly Color Accent = new Color(1f, 0.76f, 0.42f, 0.95f);
@@ -51,16 +94,34 @@ namespace BlackHoleEffect
 
             var go = new GameObject("BlackHole UI Canvas") { hideFlags = HideFlags.DontSave };
             canvas = go.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceCamera;
             canvas.worldCamera = cam != null ? cam : Camera.main;
+            var refCam = canvas.worldCamera;
+            canvas.sortingOrder = 100;
+            var scaler = go.AddComponent<CanvasScaler>();
+
+            if (WorldSpace)
+            {
+                canvas.renderMode = RenderMode.WorldSpace;
+                var crt = (RectTransform)go.transform;
+                crt.sizeDelta = new Vector2(1920f, 1080f);
+                crt.localScale = Vector3.one * (WorldWidthMeters / 1920f);
+                // Constant pixel size: ScaleWithScreenSize is meaningless once the
+                // canvas has a physical size. Text sharpness comes from the extra
+                // pixels-per-unit instead — the panels sit within arm's reach.
+                scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+                scaler.dynamicPixelsPerUnit = 3f;
+                var rig = go.AddComponent<MRWorldCanvas>();
+                rig.viewer = refCam;
+                rig.PlaceNow();
+                return canvas;
+            }
+
+            canvas.renderMode = RenderMode.ScreenSpaceCamera;
             // Just past the near plane: screen-space-camera UI is depth-tested
             // against opaque geometry, and during the fall-in the camera gets
             // closer than 1 unit to the raymarch quad — at planeDistance 1 the
             // quad would occlude every caption right when they matter most.
-            var refCam = canvas.worldCamera;
             canvas.planeDistance = refCam != null ? Mathf.Max(refCam.nearClipPlane * 1.5f, 0.15f) : 0.15f;
-            canvas.sortingOrder = 100;
-            var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
             scaler.referenceResolution = new Vector2(1920f, 1080f);
             scaler.matchWidthOrHeight = 0.5f;
@@ -181,35 +242,135 @@ namespace BlackHoleEffect
 
         static void EnsureInteraction()
         {
-            if (canvas != null && canvas.GetComponent<GraphicRaycaster>() == null)
-                canvas.gameObject.AddComponent<GraphicRaycaster>();
+            // Hand/controller rays are tracked devices, not a mouse: they need
+            // XRI's raycaster + input module. A plain GraphicRaycaster with
+            // InputSystemUIInputModule leaves every MR button dead.
+            if (canvas != null)
+            {
+                if (WorldSpace)
+                {
+                    if (canvas.GetComponent<TrackedDeviceGraphicRaycaster>() == null)
+                        canvas.gameObject.AddComponent<TrackedDeviceGraphicRaycaster>();
+                }
+                else if (canvas.GetComponent<GraphicRaycaster>() == null)
+                    canvas.gameObject.AddComponent<GraphicRaycaster>();
+            }
 
-            // Collapse to exactly ONE EventSystem. It is a DontSave object, so it
-            // survives play-mode exit; and because EventSystem.current resets to
-            // null on every domain reload, the old "current != null" guard let each
-            // play session spawn another "BlackHole EventSystem". The survivors stay
-            // active, so their InputSystemUIInputModules pile up (we saw 10) and
-            // fight over the input pipeline — UI buttons and menus stop responding.
-            // Sweep every stray copy each time we build interactive UI.
+            // Exactly ONE EventSystem must survive this. Several piled up will
+            // fight over the input pipeline and every button and hotkey goes dead
+            // — we have shipped that bug once already (ten of them, from DontSave
+            // copies leaking across play sessions while EventSystem.current reset
+            // to null on each domain reload). So: never trust a count, always sweep.
+            //
+            // Ours is not the only candidate. The XR rig brings its own EventSystem
+            // in DontDestroyOnLoad, and it is already the right one — adopt it
+            // rather than adding a rival next to it.
             UnityEngine.EventSystems.EventSystem live = null;
+            var mine = new System.Collections.Generic.List<UnityEngine.EventSystems.EventSystem>();
             foreach (var e in Resources.FindObjectsOfTypeAll<UnityEngine.EventSystems.EventSystem>())
             {
-                if (e == null || e.gameObject.name != "BlackHole EventSystem") continue;
-                // Keep the copy that belongs to the loaded scene; discard leaked
-                // orphans (DontSave survivors from previous play sessions have no
-                // valid scene) and any accidental extra.
-                if (live == null && e.gameObject.scene.IsValid()) live = e;
+                if (e == null) continue;
+                bool isOurs = e.gameObject.name == "BlackHole EventSystem";
+                // An invalid scene means a prefab asset, or a DontSave orphan left
+                // behind by an earlier play session. Ours get swept; assets ignored.
+                if (!e.gameObject.scene.IsValid())
+                {
+                    if (isOurs) Object.DestroyImmediate(e.gameObject);
+                    continue;
+                }
+                if (isOurs) mine.Add(e);
+                else if (live == null && HasMatchingModule(e)) live = e;
+            }
+
+            if (live != null)
+            {
+                // Someone else's EventSystem already drives this mode: stand down.
+                foreach (var e in mine) Object.DestroyImmediate(e.gameObject);
+                return;
+            }
+
+            foreach (var e in mine)
+            {
+                // A survivor built for the other input mode (the desktop scene was
+                // opened earlier this editor session) carries the wrong module, and
+                // would silently kill every button. Treat it as stale.
+                if (live == null && HasMatchingModule(e)) live = e;
                 else Object.DestroyImmediate(e.gameObject);
             }
             if (live != null) return;
 
             var es = new GameObject("BlackHole EventSystem") { hideFlags = HideFlags.DontSave };
             es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            if (WorldSpace)
+            {
+                es.AddComponent<XRUIInputModule>();
+                return;
+            }
 #if ENABLE_INPUT_SYSTEM
             es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
 #else
             es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
 #endif
+        }
+
+        static bool HasMatchingModule(UnityEngine.EventSystems.EventSystem es)
+        {
+            bool xr = es.GetComponent<XRUIInputModule>() != null;
+            return WorldSpace == xr;
+        }
+
+        /// <summary>
+        /// An overlay that fills the whole view — a flash, a blackout, anything
+        /// meant to hide everything at once.
+        ///
+        /// Stretching a child across the shared canvas achieves that on desktop,
+        /// where the canvas IS the screen. In MR the shared canvas is a finite
+        /// frame hanging in the room, so the same code shows a "full-screen" white
+        /// flash as a rectangle floating in space, with the room visible around it.
+        /// There, the overlay is head-locked at the near plane instead.
+        /// </summary>
+        public static Image MakeFullViewOverlay(Camera cam, string name, int sortingOrder = 150)
+        {
+            if (cam == null) cam = Camera.main;
+
+            if (!WorldSpace)
+            {
+                var canvas = EnsureCanvas(cam);
+                var flat = new GameObject(name) { hideFlags = HideFlags.DontSave };
+                flat.transform.SetParent(canvas.transform, false);
+                var frt = flat.AddComponent<RectTransform>();
+                frt.anchorMin = Vector2.zero;
+                frt.anchorMax = Vector2.one;
+                frt.offsetMin = frt.offsetMax = Vector2.zero;
+                var flatImg = flat.AddComponent<Image>();
+                flatImg.color = Color.clear;
+                flatImg.raycastTarget = false;
+                return flatImg;
+            }
+
+            if (cam == null) return null;
+            var holder = new GameObject(name) { hideFlags = HideFlags.DontSave };
+            holder.transform.SetParent(cam.transform, false);
+            holder.transform.localPosition = new Vector3(0f, 0f, Mathf.Max(cam.nearClipPlane * 2f, 0.06f));
+            holder.transform.localRotation = Quaternion.identity;
+
+            var hc = holder.AddComponent<Canvas>();
+            hc.renderMode = RenderMode.WorldSpace;
+            hc.worldCamera = cam;
+            hc.sortingOrder = sortingOrder;
+            var hrt = (RectTransform)holder.transform;
+            hrt.sizeDelta = new Vector2(1000f, 1000f);
+            hrt.localScale = Vector3.one * 0.004f; // 4x4 m at ~6 cm — past any headset FOV
+
+            var img = new GameObject("Fill") { hideFlags = HideFlags.DontSave }.AddComponent<Image>();
+            img.transform.SetParent(holder.transform, false);
+            var rt = (RectTransform)img.transform;
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            img.color = Color.clear;
+            img.raycastTarget = false;
+            return img;
         }
 
         public static Image MakeImage(Transform parent, string name, Sprite sprite, Color color,
