@@ -21,6 +21,11 @@ namespace MilkyWay
         public MilkyWayController controller;
         public CinematicOrbit orbit;
         public ZoomJourney journey;
+        public NightSkyConnection nightSky;
+
+        bool AnyPlaying =>
+            (journey != null && journey.IsPlaying) ||
+            (nightSky != null && nightSky.IsPlaying);
 
         float distance, yaw, pitch;
         GameObject helpBar;
@@ -37,11 +42,11 @@ namespace MilkyWay
         void Update()
         {
             ReadHotkeys();
-            if (journey == null || !journey.IsPlaying)
+            if (!AnyPlaying)
                 ReadMouse();
             if (helpBar != null)
             {
-                helpBar.SetActive(showHelp && (journey == null || !journey.IsPlaying));
+                helpBar.SetActive(showHelp && !AnyPlaying);
                 if (helpLocVersion != Loc.Version) { helpLocVersion = Loc.Version; UpdateHelpText(); }
             }
         }
@@ -51,11 +56,13 @@ namespace MilkyWay
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
-            if (kb.f1Key.wasPressedThisFrame && journey != null && !journey.IsPlaying) journey.Begin();
+            if (kb.f1Key.wasPressedThisFrame && journey != null && !AnyPlaying) journey.Begin();
+            if (kb.f2Key.wasPressedThisFrame && nightSky != null && !AnyPlaying) nightSky.Begin();
             if (kb.kKey.wasPressedThisFrame) Loc.Cycle();
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
 #else
-            if (Input.GetKeyDown(KeyCode.F1) && journey != null && !journey.IsPlaying) journey.Begin();
+            if (Input.GetKeyDown(KeyCode.F1) && journey != null && !AnyPlaying) journey.Begin();
+            if (Input.GetKeyDown(KeyCode.F2) && nightSky != null && !AnyPlaying) nightSky.Begin();
             if (Input.GetKeyDown(KeyCode.K)) Loc.Cycle();
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
 #endif
@@ -125,10 +132,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("F1") + "줌 여행 (태양에서 은하까지)   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("F1") + "zoom journey (Sun to galaxy)   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
-                Key("F1") + "ズームの旅（太陽から銀河へ）   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("F1") + "缩放之旅（从太阳到银河）   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘 연결   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("F1") + "zoom journey   " + Key("F2") + "night-sky link   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
+                Key("F1") + "ズームの旅   " + Key("F2") + "夜空とのつながり   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("F1") + "缩放之旅   " + Key("F2") + "夜空的连接   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }

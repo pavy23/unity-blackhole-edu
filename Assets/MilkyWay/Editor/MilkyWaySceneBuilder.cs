@@ -99,10 +99,15 @@ namespace MilkyWay.Editor
             journey.controller = controller;
             journey.orbit = orbit;
 
+            var nightSky = camGO.AddComponent<NightSkyConnection>();
+            nightSky.controller = controller;
+            nightSky.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
             controls.journey = journey;
+            controls.nightSky = nightSky;
 
             SetupPostProcessing();
 
