@@ -107,12 +107,17 @@ namespace MilkyWay.Editor
             m31.controller = controller;
             m31.orbit = orbit;
 
+            var tour = camGO.AddComponent<MilkyWayTour>();
+            tour.controller = controller;
+            tour.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
             controls.journey = journey;
             controls.nightSky = nightSky;
             controls.andromeda = m31;
+            controls.tour = tour;
 
             SetupPostProcessing();
 

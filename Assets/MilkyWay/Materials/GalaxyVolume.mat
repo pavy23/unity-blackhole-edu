@@ -33,7 +33,7 @@ Material:
     - _DustStrength: 3.4
     - _HiiStrength: 1
     - _PitchTan: 0.2217
-    - _Steps: 80
+    - _Steps: 64
     - _TidalAmount: 0
     - _YoungStrength: 1
     m_Colors:
