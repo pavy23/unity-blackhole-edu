@@ -103,11 +103,16 @@ namespace MilkyWay.Editor
             nightSky.controller = controller;
             nightSky.orbit = orbit;
 
+            var m31 = camGO.AddComponent<AndromedaCollision>();
+            m31.controller = controller;
+            m31.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
             controls.journey = journey;
             controls.nightSky = nightSky;
+            controls.andromeda = m31;
 
             SetupPostProcessing();
 

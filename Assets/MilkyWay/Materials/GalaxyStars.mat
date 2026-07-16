@@ -26,8 +26,11 @@ Material:
     m_Ints: []
     m_Floats:
     - _NearFade: 0.08
+    - _Scramble: 0
     - _SizeScale: 1
     - _StarBrightness: 1.15
-    m_Colors: []
+    - _TidalAmount: 0
+    m_Colors:
+    - _TidalDir: {r: 1, g: 0, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

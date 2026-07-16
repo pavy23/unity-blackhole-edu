@@ -51,10 +51,14 @@ namespace MilkyWay
         {
             Teardown();
             // HideAndDontSave children survive domain reloads while our field
-            // reference resets — sweep orphans by name (the BH-project lesson).
+            // reference resets — sweep MY stale copy (the BH-project lesson).
+            // Only under this transform: a global name sweep would destroy the
+            // live mesh of every OTHER star field the moment a second galaxy
+            // is instantiated (the Andromeda encounter does exactly that).
             foreach (var t in Resources.FindObjectsOfTypeAll<Transform>())
                 if (t != null && t.name == "Galaxy Stars Mesh"
-                    && (t.hideFlags & HideFlags.HideAndDontSave) != 0)
+                    && (t.hideFlags & HideFlags.HideAndDontSave) != 0
+                    && t.parent == transform)
                     DestroyImmediate(t.gameObject);
 
             builtCount = starCount;

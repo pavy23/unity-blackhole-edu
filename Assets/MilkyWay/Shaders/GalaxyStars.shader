@@ -14,6 +14,10 @@ Shader "MilkyWay/GalaxyStars"
         _SizeScale("Size Scale", Range(0.2, 4.0)) = 1.0
         [Header(Camera proximity)]
         _NearFade("Fade Radius (kpc)", Range(0.005, 1.0)) = 0.08
+        [Header(Encounter (driven by AndromedaCollision))]
+        _TidalDir("Tidal Direction (object space)", Vector) = (1, 0, 0, 0)
+        _TidalAmount("Tidal Stretch", Range(0.0, 1.5)) = 0.0
+        _Scramble("Phase Mixing (merger)", Range(0.0, 1.0)) = 0.0
     }
 
     SubShader
@@ -35,7 +39,31 @@ Shader "MilkyWay/GalaxyStars"
 
             CBUFFER_START(UnityPerMaterial)
                 float _StarBrightness, _SizeScale, _NearFade;
+                float _TidalAmount, _Scramble;
+                float4 _TidalDir;
             CBUFFER_END
+
+            // The stars are physically displaced (forward warp — the volume
+            // inverse-warps its samples; the two agree). Scramble is the
+            // merger's phase mixing: each star slides a random azimuth and
+            // puffs vertically, dissolving the spiral pattern into the smooth
+            // ellipsoid the volume becomes when its arms switch off.
+            float3 encounterWarp(float3 p, float rand)
+            {
+                if (_TidalAmount > 0.001)
+                {
+                    float3 dir = normalize(_TidalDir.xyz);
+                    p += dir * dot(p, dir) * _TidalAmount;
+                }
+                if (_Scramble > 0.001)
+                {
+                    float ang = (rand - 0.5) * 2.6 * _Scramble;
+                    float c = cos(ang), s = sin(ang);
+                    p.xz = float2(p.x * c - p.z * s, p.x * s + p.z * c);
+                    p.y *= 1.0 + _Scramble * (0.6 + 2.4 * frac(rand * 7.31));
+                }
+                return p;
+            }
 
             struct Attributes
             {
@@ -60,7 +88,7 @@ Shader "MilkyWay/GalaxyStars"
                 UNITY_SETUP_INSTANCE_ID(v);
                 UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);
 
-                float3 centreWS = TransformObjectToWorld(v.positionOS.xyz);
+                float3 centreWS = TransformObjectToWorld(encounterWarp(v.positionOS.xyz, v.sizeRand.y));
                 float3 toCam = _WorldSpaceCameraPos - centreWS;
                 float dist = length(toCam);
 

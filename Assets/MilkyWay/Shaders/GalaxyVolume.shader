@@ -24,6 +24,11 @@ Shader "MilkyWay/GalaxyVolume"
 
         [Header(Quality)]
         _Steps("March Steps", Range(24, 160)) = 80
+
+        [Header(Encounter (driven by AndromedaCollision))]
+        _ArmStrength("Arm Strength", Range(0.0, 1.5)) = 1.0
+        _TidalDir("Tidal Direction (object space)", Vector) = (1, 0, 0, 0)
+        _TidalAmount("Tidal Stretch", Range(0.0, 1.5)) = 0.0
     }
 
     SubShader
@@ -48,7 +53,21 @@ Shader "MilkyWay/GalaxyVolume"
                 float _Brightness, _BulgeBoost, _HiiStrength, _YoungStrength;
                 float _DustStrength, _ArmWidth, _PitchTan, _Clumpiness;
                 float _Steps;
+                float _ArmStrength, _TidalAmount;
+                float4 _TidalDir;
             CBUFFER_END
+
+            // Tidal stretch: the galaxy's matter is pulled toward a companion,
+            // elongating the whole body along that line by (1 + amount). The
+            // volume achieves it by INVERSE-warping the sample point — density
+            // queried closer to the core along the stretch axis.
+            float3 tidalWarp(float3 p)
+            {
+                if (_TidalAmount < 0.001) return p;
+                float3 dir = normalize(_TidalDir.xyz);
+                float along = dot(p, dir);
+                return p - dir * along * (_TidalAmount / (1.0 + _TidalAmount));
+            }
 
             // Bounding ellipsoid radii (kpc): hugs disk + bulge + a little halo.
             static const float3 BOUNDS = float3(17.0, 4.0, 17.0);
@@ -116,6 +135,7 @@ Shader "MilkyWay/GalaxyVolume"
             // Emitted light + extinction of the interstellar medium at p.
             void galaxyMedium(float3 p, out float3 emission, out float absorb)
             {
+                p = tidalWarp(p);
                 float r = length(p.xz);
                 float theta = atan2(p.z, p.x);
 
@@ -145,7 +165,7 @@ Shader "MilkyWay/GalaxyVolume"
                 // peaks, which drew two bright arcs hugging the bulge like
                 // parentheses — the innermost winding igniting all at once.
                 float armRegion = smoothstep(3.2, 6.5, r) * edge;
-                arms *= armRegion;
+                arms *= armRegion * _ArmStrength; // 0 = the merged elliptical
 
                 float vertThin = exp(-(p.y * p.y) / (0.18 * 0.18 + 0.0009 * r * r));
                 float vertDust = exp(-(p.y * p.y) / (0.19 * 0.19 + 0.0006 * r * r));
