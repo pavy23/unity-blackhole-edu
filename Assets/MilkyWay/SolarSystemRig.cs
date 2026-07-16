@@ -27,6 +27,9 @@ namespace MilkyWay
             public float radiusEarths;  // real size, mapped to visual
             public float tiltDeg;       // real axial tilt (obliquity)
             public float dayHours;      // real rotation period, negative = retrograde
+            public string tex;          // Resources/Planets albedo map (photoreal); null = procedural
+            public string cloudTex;     // optional observed cloud layer (Earth)
+            public string nightTex;     // optional night-side city lights (Earth)
             public System.Action<Material> paint;
             public MoonDef[] moons;
         }
@@ -36,6 +39,7 @@ namespace MilkyWay
             public string name;
             public float orbitPlanetRadii; // visual, in units of the planet's visual radius
             public float sizeRel;          // visual, relative to its planet's visual radius
+            public string tex;             // observed map if we have one (the Moon)
             public Color color;
         }
 
@@ -96,14 +100,14 @@ namespace MilkyWay
 
         static BodyDef[] Defs => new[]
         {
-            new BodyDef { name = "Mercury", au = 0.39f, radiusEarths = 0.38f, tiltDeg = 0.03f, dayHours = 1407.6f,
+            new BodyDef { name = "Mercury", au = 0.39f, radiusEarths = 0.38f, tiltDeg = 0.03f, dayHours = 1407.6f, tex = "2k_mercury",
                 paint = m => {
                     m.SetColor("_BaseColor", new Color(0.55f, 0.51f, 0.47f));
                     m.SetColor("_SecondColor", new Color(0.38f, 0.35f, 0.33f));
                     m.SetFloat("_Mottle", 0.85f);
                     m.SetFloat("_NoiseScale", 9f);
                 } },
-            new BodyDef { name = "Venus", au = 0.72f, radiusEarths = 0.95f, tiltDeg = 177.4f, dayHours = -5832.5f,
+            new BodyDef { name = "Venus", au = 0.72f, radiusEarths = 0.95f, tiltDeg = 177.4f, dayHours = -5832.5f, tex = "2k_venus_atmosphere",
                 paint = m => {
                     m.SetColor("_BaseColor", new Color(0.93f, 0.83f, 0.60f));
                     m.SetColor("_SecondColor", new Color(0.82f, 0.70f, 0.48f));
@@ -113,7 +117,8 @@ namespace MilkyWay
                     m.SetColor("_RimColor", new Color(0.9f, 0.8f, 0.5f) * 0.35f);
                 } },
             new BodyDef { name = "Earth", au = 1f, radiusEarths = 1f, tiltDeg = 23.4f, dayHours = 23.9f,
-                moons = new[] { new MoonDef { name = "Moon", orbitPlanetRadii = 3.2f, sizeRel = 0.27f,
+                tex = "2k_earth_daymap", cloudTex = "2k_earth_clouds", nightTex = "2k_earth_nightmap",
+                moons = new[] { new MoonDef { name = "Moon", orbitPlanetRadii = 3.2f, sizeRel = 0.27f, tex = "2k_moon",
                                               color = new Color(0.62f, 0.61f, 0.59f) } },
                 paint = m => {
                     m.SetColor("_OceanColor", new Color(0.03f, 0.13f, 0.38f));
@@ -130,7 +135,7 @@ namespace MilkyWay
                     m.SetFloat("_NoiseScale", 5f);
                     m.SetColor("_RimColor", new Color(0.35f, 0.55f, 1f) * 0.35f);
                 } },
-            new BodyDef { name = "Mars", au = 1.52f, radiusEarths = 0.53f, tiltDeg = 25.2f, dayHours = 24.6f,
+            new BodyDef { name = "Mars", au = 1.52f, radiusEarths = 0.53f, tiltDeg = 25.2f, dayHours = 24.6f, tex = "2k_mars",
                 paint = m => {
                     m.SetColor("_BaseColor", new Color(0.72f, 0.38f, 0.22f));
                     m.SetColor("_SecondColor", new Color(0.45f, 0.24f, 0.15f));
@@ -139,7 +144,7 @@ namespace MilkyWay
                     m.SetFloat("_NoiseScale", 7f);
                     m.SetColor("_RimColor", new Color(0.8f, 0.55f, 0.4f) * 0.15f);
                 } },
-            new BodyDef { name = "Jupiter", au = 5.2f, radiusEarths = 11.2f, tiltDeg = 3.1f, dayHours = 9.9f,
+            new BodyDef { name = "Jupiter", au = 5.2f, radiusEarths = 11.2f, tiltDeg = 3.1f, dayHours = 9.9f, tex = "2k_jupiter",
                 moons = new[] {
                     new MoonDef { name = "Io",       orbitPlanetRadii = 1.9f, sizeRel = 0.09f, color = new Color(0.85f, 0.75f, 0.35f) },
                     new MoonDef { name = "Europa",   orbitPlanetRadii = 2.4f, sizeRel = 0.08f, color = new Color(0.80f, 0.78f, 0.72f) },
@@ -156,7 +161,7 @@ namespace MilkyWay
                     m.SetFloat("_Spot", 0.85f);
                     m.SetColor("_SpotColor", new Color(0.72f, 0.30f, 0.18f));
                 } },
-            new BodyDef { name = "Saturn", au = 9.54f, radiusEarths = 9.4f, tiltDeg = 26.7f, dayHours = 10.7f,
+            new BodyDef { name = "Saturn", au = 9.54f, radiusEarths = 9.4f, tiltDeg = 26.7f, dayHours = 10.7f, tex = "2k_saturn",
                 moons = new[] { new MoonDef { name = "Titan", orbitPlanetRadii = 3.4f, sizeRel = 0.14f,
                                               color = new Color(0.85f, 0.65f, 0.35f) } },
                 paint = m => {
@@ -167,7 +172,7 @@ namespace MilkyWay
                     m.SetFloat("_Mottle", 0.08f);
                     m.SetFloat("_NoiseScale", 4f);
                 } },
-            new BodyDef { name = "Uranus", au = 19.2f, radiusEarths = 4.0f, tiltDeg = 97.8f, dayHours = -17.2f,
+            new BodyDef { name = "Uranus", au = 19.2f, radiusEarths = 4.0f, tiltDeg = 97.8f, dayHours = -17.2f, tex = "2k_uranus",
                 paint = m => {
                     m.SetColor("_BaseColor", new Color(0.62f, 0.85f, 0.88f));
                     m.SetColor("_SecondColor", new Color(0.52f, 0.76f, 0.82f));
@@ -176,7 +181,7 @@ namespace MilkyWay
                     m.SetFloat("_Mottle", 0.05f);
                     m.SetColor("_RimColor", new Color(0.5f, 0.8f, 0.85f) * 0.25f);
                 } },
-            new BodyDef { name = "Neptune", au = 30.1f, radiusEarths = 3.9f, tiltDeg = 28.3f, dayHours = 16.1f,
+            new BodyDef { name = "Neptune", au = 30.1f, radiusEarths = 3.9f, tiltDeg = 28.3f, dayHours = 16.1f, tex = "2k_neptune",
                 paint = m => {
                     m.SetColor("_BaseColor", new Color(0.20f, 0.35f, 0.85f));
                     m.SetColor("_SecondColor", new Color(0.12f, 0.24f, 0.62f));
@@ -220,6 +225,7 @@ namespace MilkyWay
                 var mat = new Material(PlanetShader);
                 mat.SetVector("_SunPos", transform.position);
                 def.paint(mat);
+                ApplyRealMap(mat, def.tex, def.cloudTex, def.nightTex);
                 var sphere = MakeSphere("Surface", tiltNode, size, mat);
                 mats.Add(mat);
 
@@ -243,6 +249,49 @@ namespace MilkyWay
 
                 BuildOrbitLine(lineShader, orbit);
                 index++;
+            }
+        }
+
+        /// <summary>Swap a body onto its observed albedo map (NASA/USGS data
+        /// via Solar System Scope, see Resources/Planets/ATTRIBUTION.txt).
+        /// The paint lambda stays authored as the fallback: if the map is
+        /// missing from Resources the planet is procedural, not magenta.
+        /// A photograph already contains the ice caps, storms, continents
+        /// and bands, so every procedural overlay that would double them up
+        /// is switched off; lighting, rim atmosphere and clouds still run.</summary>
+        static void ApplyRealMap(Material m, string tex, string cloudTex, string nightTex = null)
+        {
+            if (string.IsNullOrEmpty(tex)) return;
+            var map = Resources.Load<Texture2D>("Planets/" + tex);
+            if (map == null) return;
+
+            var night = string.IsNullOrEmpty(nightTex) ? null : Resources.Load<Texture2D>("Planets/" + nightTex);
+            if (night != null)
+            {
+                m.SetTexture("_NightTex", night);
+                m.SetFloat("_NightStrength", 1f);
+            }
+
+            m.SetTexture("_MainTex", map);
+            m.SetFloat("_TexStrength", 1f);
+            m.SetFloat("_Mottle", 0f);
+            m.SetFloat("_BandFreq", 0f);
+            m.SetFloat("_Continents", 0f);
+            m.SetFloat("_IceCap", 1.2f);
+            m.SetFloat("_Spot", 0f);
+
+            var clouds = string.IsNullOrEmpty(cloudTex) ? null : Resources.Load<Texture2D>("Planets/" + cloudTex);
+            if (clouds != null)
+            {
+                m.SetTexture("_CloudTex", clouds);
+                m.SetFloat("_UseCloudTex", 1f);
+                m.SetFloat("_Clouds", 0.85f);
+            }
+            else
+            {
+                // No separate weather layer: the map is the whole look
+                // (Venus's map IS its cloud deck), so procedural clouds off.
+                m.SetFloat("_Clouds", 0f);
             }
         }
 
@@ -282,11 +331,16 @@ namespace MilkyWay
                 {
                     int a = y * (lonSegs + 1) + x;
                     int b = a + lonSegs + 1;
-                    // Winding chosen so the OUTSIDE is the front face — get it
+                    // Winding so the OUTSIDE is the front face — get it
                     // backwards and Cull Back shows the far hemisphere's
-                    // interior: a fully-lit "night side" that looks almost right.
-                    tris[t++] = a; tris[t++] = a + 1; tris[t++] = b;
-                    tris[t++] = a + 1; tris[t++] = b + 1; tris[t++] = b;
+                    // interior: a fully-lit "night side" that looks almost
+                    // right. It shipped backwards at first, and only a
+                    // day/night pixel probe caught it (night face read 3×
+                    // brighter than day): from outside, a→b→a+1 must trace
+                    // clockwise. Chirality check for the maps: Florida hooks
+                    // toward Cuba, Africa sits EAST of Brazil.
+                    tris[t++] = a; tris[t++] = b; tris[t++] = a + 1;
+                    tris[t++] = a + 1; tris[t++] = b; tris[t++] = b + 1;
                 }
             var mesh = new Mesh { indexFormat = UnityEngine.Rendering.IndexFormat.UInt32 };
             mesh.vertices = verts;
@@ -315,6 +369,14 @@ namespace MilkyWay
                 m.SetFloat("_GranScale", 8f);
                 m.SetFloat("_SpotStrength", 0.22f);
                 m.SetFloat("_CoronaBoost", 0.8f);
+                // Observed photosphere (opt-in shader path; the black-hole
+                // exhibits keep their procedural stars untouched).
+                var sunMap = Resources.Load<Texture2D>("Planets/2k_sun");
+                if (sunMap != null)
+                {
+                    m.SetTexture("_SurfaceTex", sunMap);
+                    m.SetFloat("_SurfaceTexStrength", 0.85f);
+                }
                 sun.GetComponent<MeshRenderer>().sharedMaterial = m;
                 mats.Add(m);
             }
@@ -335,6 +397,7 @@ namespace MilkyWay
                 mat.SetColor("_SecondColor", md.color * 0.6f);
                 mat.SetFloat("_Mottle", 0.8f);
                 mat.SetFloat("_NoiseScale", 11f);
+                ApplyRealMap(mat, md.tex, null);
                 var sphere = MakeSphere("Surface", pivot, planetSize * md.sizeRel, mat);
                 mats.Add(mat);
 
@@ -362,6 +425,12 @@ namespace MilkyWay
             mf.sharedMesh = ringMesh;
             var mat = new Material(RingShader);
             mat.SetVector("_SunPos", transform.position);
+            var strip = Resources.Load<Texture2D>("Planets/2k_saturn_ring_alpha");
+            if (strip != null)
+            {
+                mat.SetTexture("_RingTex", strip);
+                mat.SetFloat("_RingTexStrength", 1f);
+            }
             mr.sharedMaterial = mat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mats.Add(mat);

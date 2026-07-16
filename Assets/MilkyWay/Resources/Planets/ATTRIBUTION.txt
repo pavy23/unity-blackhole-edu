@@ -1,0 +1,5 @@
+Planet texture maps: "Solar System Textures" by Solar System Scope
+https://www.solarsystemscope.com/textures/
+License: CC Attribution 4.0 International (https://creativecommons.org/licenses/by/4.0/)
+Based on NASA / USGS Astrogeology / JPL elevation and imagery data.
+2k equirectangular set, downloaded 2026-07-17.

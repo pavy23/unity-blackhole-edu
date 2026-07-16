@@ -14,6 +14,10 @@ Shader "BlackHole/StarSurface"
         _SpotStrength("Starspots", Range(0, 1)) = 0.35
         _CoronaBoost("Corona Intensity", Range(0, 3)) = 0.8
         _CoronaExtent("Corona Extent", Range(1.1, 3)) = 1.45
+        // Optional observed photosphere map (equirectangular). Off by default
+        // so every existing black-hole star keeps its procedural look.
+        _SurfaceTex("Surface Map", 2D) = "black" {}
+        _SurfaceTexStrength("Surface Map Strength", Range(0, 1)) = 0.0
     }
 
     SubShader
@@ -38,7 +42,10 @@ Shader "BlackHole/StarSurface"
                 half4 _StarColor;
                 float _Granulation, _GranScale, _LimbPower, _RimBoost;
                 float _SpotStrength, _CoronaBoost, _CoronaExtent;
+                float _SurfaceTexStrength;
             CBUFFER_END
+
+            TEXTURE2D(_SurfaceTex); SAMPLER(sampler_SurfaceTex);
 
             struct Attributes
             {
@@ -103,6 +110,23 @@ Shader "BlackHole/StarSurface"
                 float3 col = (_StarColor.rgb * (limb * gran) * spots
                             + hotTint * hotCores * limb
                             + rimTint * rim) * flicker;
+
+                // Observed photosphere (e.g. the SDO sun map): replaces the
+                // procedural granulation/spots but keeps limb darkening, the
+                // chromosphere rim and the flicker. The map drifts slowly in
+                // longitude — a stand-in for the ~25-day solar rotation.
+                if (_SurfaceTexStrength > 0.001)
+                {
+                    float3 os = normalize(i.normalOS);
+                    float vTex = asin(clamp(os.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+                    float lon = atan2(os.z, os.x) / 6.2831853 + _Time.y * 0.002;
+                    float uA = frac(lon);
+                    float uB = frac(lon + 0.5) - 0.5;
+                    float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, vTex) : float2(uB, vTex);
+                    float3 photo = SAMPLE_TEXTURE2D(_SurfaceTex, sampler_SurfaceTex, uv).rgb;
+                    float3 mapped = (photo * _StarColor.rgb * limb + rimTint * rim) * flicker;
+                    col = lerp(col, mapped, _SurfaceTexStrength);
+                }
                 return half4(col, 1.0);
             }
             ENDHLSL
@@ -132,6 +156,7 @@ Shader "BlackHole/StarSurface"
                 half4 _StarColor;
                 float _Granulation, _GranScale, _LimbPower, _RimBoost;
                 float _SpotStrength, _CoronaBoost, _CoronaExtent;
+                float _SurfaceTexStrength; // unused here; must mirror pass 1 for the SRP batcher
             CBUFFER_END
 
             struct Attributes

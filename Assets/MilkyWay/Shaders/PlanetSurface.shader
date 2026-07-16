@@ -9,6 +9,14 @@ Shader "MilkyWay/PlanetSurface"
     // in the rig is an emissive prop, not a Light component.
     Properties
     {
+        [Header(Real map (equirectangular))]
+        _MainTex("Albedo Map", 2D) = "black" {}
+        _TexStrength("Map Strength (0 = procedural)", Range(0, 1)) = 0.0
+        _CloudTex("Cloud Map (Earth)", 2D) = "black" {}
+        _UseCloudTex("Use Cloud Map", Range(0, 1)) = 0.0
+        _NightTex("Night Lights Map (Earth)", 2D) = "black" {}
+        _NightStrength("Night Lights Strength", Range(0, 2)) = 0.0
+
         _BaseColor("Base Colour", Color) = (0.5, 0.5, 0.5, 1)
         _SecondColor("Second Colour (bands / land)", Color) = (0.7, 0.6, 0.45, 1)
         _OceanColor("Ocean Colour", Color) = (0.06, 0.18, 0.42, 1)
@@ -55,7 +63,28 @@ Shader "MilkyWay/PlanetSurface"
                 float _NoiseScale, _Mottle, _BandFreq, _BandWarp;
                 float _Continents, _SeaLevel, _IceCap, _Clouds, _Spot;
                 float _Ambient, _Glow;
+                float _TexStrength, _UseCloudTex, _NightStrength;
             CBUFFER_END
+
+            TEXTURE2D(_MainTex);  SAMPLER(sampler_MainTex);
+            TEXTURE2D(_CloudTex); SAMPLER(sampler_CloudTex);
+            TEXTURE2D(_NightTex); SAMPLER(sampler_NightTex);
+
+            // Equirectangular lookup from the object-space surface direction.
+            // The atan2 longitude wraps at ±π, which makes the u derivative
+            // jump across the seam and mip selection fetch the smallest mip —
+            // a one-pixel column of mud down the sphere. Classic fix: build a
+            // second candidate with the seam rotated half a turn away and let
+            // each pixel use whichever coordinate is locally continuous.
+            half3 SampleEquirect(TEXTURE2D_PARAM(tex, samp), float3 os, float lonOffset)
+            {
+                float v = asin(clamp(os.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+                float lon = atan2(os.z, os.x) / 6.2831853; // -0.5 .. 0.5
+                float uA = frac(lon + lonOffset);
+                float uB = frac(lon + lonOffset + 0.5) - 0.5;
+                float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, v) : float2(uB, v);
+                return SAMPLE_TEXTURE2D(tex, samp, uv).rgb;
+            }
 
             float pl_hash(float3 p)
             {
@@ -161,14 +190,29 @@ Shader "MilkyWay/PlanetSurface"
                     col = lerp(col, _SpotColor.rgb, _Spot * smoothstep(0.16, 0.05, d));
                 }
 
+                // A real observed albedo map replaces everything procedural
+                // above (bands, mottling, continents, ice, storms are all in
+                // the photograph already); clouds and lighting still apply.
+                if (_TexStrength > 0.001)
+                    col = lerp(col, SampleEquirect(TEXTURE2D_ARGS(_MainTex, sampler_MainTex), os, 0.0), _TexStrength);
+
                 // Clouds drift slowly relative to the surface.
                 if (_Clouds > 0.01)
                 {
-                    float cl = pl_fbm(os * _NoiseScale * 0.9 + float3(_Time.y * 0.015, 0, 0));
-                    // Threshold above the fbm mean, or a thin haze veils the
-                    // whole sphere and washes the surface colours pastel.
-                    col = lerp(col, float3(0.95, 0.96, 0.98),
-                               _Clouds * smoothstep(0.57, 0.75, cl));
+                    float cl;
+                    if (_UseCloudTex > 0.5)
+                    {
+                        // The observed cloud map, slid in longitude so the
+                        // weather moves relative to the ground.
+                        cl = SampleEquirect(TEXTURE2D_ARGS(_CloudTex, sampler_CloudTex), os, _Time.y * 0.004).r;
+                    }
+                    else
+                    {
+                        // Threshold above the fbm mean, or a thin haze veils the
+                        // whole sphere and washes the surface colours pastel.
+                        cl = smoothstep(0.57, 0.75, pl_fbm(os * _NoiseScale * 0.9 + float3(_Time.y * 0.015, 0, 0)));
+                    }
+                    col = lerp(col, float3(0.95, 0.96, 0.98), _Clouds * cl);
                 }
 
                 // Sun-lit Lambert with a wrap term; ambient floor keeps the
@@ -183,7 +227,17 @@ Shader "MilkyWay/PlanetSurface"
                 float fres = pow(1.0 - saturate(dot(N, V)), 3.0);
                 float3 rim = _RimColor.rgb * fres * (0.25 + 0.75 * ndl);
 
-                return half4(col * light * (1.0 + _Glow) + rim, 1.0);
+                // City lights emerge as the sun sets: emissive, night side
+                // only, fading out through the terminator. Squaring the map
+                // keeps JPEG's near-black noise floor from hazing the oceans.
+                float3 night = 0.0;
+                if (_NightStrength > 0.001)
+                {
+                    float3 lights = SampleEquirect(TEXTURE2D_ARGS(_NightTex, sampler_NightTex), os, 0.0);
+                    night = lights * lights * 2.0 * _NightStrength * (1.0 - smoothstep(0.0, 0.30, ndl));
+                }
+
+                return half4(col * light * (1.0 + _Glow) + rim + night, 1.0);
             }
             ENDHLSL
         }

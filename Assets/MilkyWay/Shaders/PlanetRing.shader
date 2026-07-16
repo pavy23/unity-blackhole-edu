@@ -7,6 +7,8 @@ Shader "MilkyWay/PlanetRing"
     Properties
     {
         _RingColor("Ring Colour", Color) = (0.82, 0.74, 0.58, 1)
+        _RingTex("Ring Strip (x = radius, rgba)", 2D) = "black" {}
+        _RingTexStrength("Ring Strip Strength", Range(0, 1)) = 0.0
         _SunPos("Sun Position (world)", Vector) = (0, 0, 0, 0)
         _Ambient("Ambient Floor", Range(0, 1)) = 0.15
         _Opacity("Opacity", Range(0, 1)) = 0.9
@@ -32,7 +34,10 @@ Shader "MilkyWay/PlanetRing"
             CBUFFER_START(UnityPerMaterial)
                 float4 _RingColor, _SunPos;
                 float _Ambient, _Opacity;
+                float _RingTexStrength;
             CBUFFER_END
+
+            TEXTURE2D(_RingTex); SAMPLER(sampler_RingTex);
 
             float ring_hash(float p)
             {
@@ -81,14 +86,21 @@ Shader "MilkyWay/PlanetRing"
                 bands *= 0.7 + 0.3 * ring_noise(r * 90.0 + 7.0);
                 float cassini = 1.0 - smoothstep(0.62, 0.64, r) * (1.0 - smoothstep(0.68, 0.70, r));
                 float edge = smoothstep(0.0, 0.06, r) * (1.0 - smoothstep(0.93, 1.0, r));
-                float alpha = bands * cassini * edge * _Opacity;
+
+                // The observed ring strip (Cassini imagery reduced to a radial
+                // profile): rgb is the ring colour, alpha its optical depth —
+                // the real gaps and the real grading replace the noise bands.
+                half4 strip = SAMPLE_TEXTURE2D(_RingTex, sampler_RingTex, float2(r, 0.5));
+
+                float alpha = lerp(bands * cassini * edge, strip.a, _RingTexStrength) * _Opacity;
+                float3 baseCol = lerp(_RingColor.rgb * (0.85 + 0.3 * bands), strip.rgb, _RingTexStrength);
 
                 // Flat ring: both faces catch light by |N·L|.
                 float3 N = normalize(i.normalWS);
                 float3 L = normalize(_SunPos.xyz - i.positionWS);
                 float light = _Ambient + (1.0 - _Ambient) * abs(dot(N, L));
 
-                return half4(_RingColor.rgb * light * (0.85 + 0.3 * bands), alpha);
+                return half4(baseCol * light, alpha);
             }
             ENDHLSL
         }
