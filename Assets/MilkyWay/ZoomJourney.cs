@@ -33,8 +33,7 @@ namespace MilkyWay
         Text caption;
         RectTransform captionPanel;
         Button stopButton;
-        GameObject sunProp;
-        Material sunMat;
+        SolarSystemRig solarSystem;
         LineRenderer marker;
         Material markerMat;
 
@@ -204,139 +203,16 @@ namespace MilkyWay
         // ---------------- props ----------------
 
         /// <summary>
-        /// The solar system we depart from: the Sun (the black-hole exhibit's
-        /// StarSurface shader — granulation + limb darkening) and an orrery of
-        /// the eight planets on faint orbit rings, ticking along at Kepler
-        /// -proportioned speeds. Wildly out of scale — a real Neptune orbit is
-        /// 1.5e-9 kpc — and honest about it in the caption: this is the model
-        /// on the teacher's desk, placed where the real thing lives.
+        /// The solar system we depart from — the detailed SolarSystemRig
+        /// (procedural planet surfaces, real tilts, moons, Saturn's rings),
+        /// placed where the real thing lives. Still wildly out of scale — a
+        /// real Neptune orbit is 1.5e-9 kpc — and the caption stays honest
+        /// about it: this is the model on the teacher's desk.
         /// </summary>
         void EnsureSunProp()
         {
-            if (sunProp != null) return;
-            sunProp = new GameObject("Solar System (journey prop)");
-            sunProp.transform.position = controller.SunPositionWorld;
-
-            // ---- the Sun ----
-            var sun = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            sun.name = "Sun";
-            Destroy(sun.GetComponent<Collider>());
-            sun.transform.SetParent(sunProp.transform, false);
-            sun.transform.localScale = Vector3.one * 0.012f;
-            var starShader = Shader.Find("BlackHole/StarSurface");
-            if (starShader != null)
-            {
-                sunMat = new Material(starShader);
-                sunMat.SetColor("_StarColor", new Color(2.6f, 2.2f, 1.4f)); // G-type warmth
-                sunMat.SetFloat("_Granulation", 0.45f);
-                sunMat.SetFloat("_GranScale", 8f);
-                sunMat.SetFloat("_SpotStrength", 0.22f);
-                sunMat.SetFloat("_CoronaBoost", 0.8f);
-                sun.GetComponent<MeshRenderer>().sharedMaterial = sunMat;
-            }
-
-            // ---- the planets: radius(kpc-orrery), size, colour, has ring ----
-            var defs = new (string name, float orbit, float size, Color col, bool ring)[]
-            {
-                ("Mercury", 0.010f, 0.0011f, new Color(0.62f, 0.58f, 0.54f), false),
-                ("Venus",   0.014f, 0.0016f, new Color(0.92f, 0.82f, 0.62f), false),
-                ("Earth",   0.018f, 0.0017f, new Color(0.35f, 0.55f, 0.95f), false),
-                ("Mars",    0.023f, 0.0013f, new Color(0.88f, 0.45f, 0.28f), false),
-                ("Jupiter", 0.030f, 0.0036f, new Color(0.85f, 0.72f, 0.55f), false),
-                ("Saturn",  0.037f, 0.0031f, new Color(0.90f, 0.80f, 0.58f), true),
-                ("Uranus",  0.043f, 0.0023f, new Color(0.60f, 0.85f, 0.88f), false),
-                ("Neptune", 0.048f, 0.0022f, new Color(0.30f, 0.45f, 0.90f), false),
-            };
-
-            var unlit = Shader.Find("Universal Render Pipeline/Unlit");
-            var lineShader = Shader.Find("Sprites/Default");
-            var orrery = sunProp.AddComponent<Orrery>();
-            orrery.planets = new Transform[defs.Length];
-            orrery.radii = new float[defs.Length];
-            orrery.speeds = new float[defs.Length];
-            orrery.phases = new float[defs.Length];
-
-            for (int i = 0; i < defs.Length; i++)
-            {
-                var d = defs[i];
-                var p = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-                p.name = d.name;
-                Destroy(p.GetComponent<Collider>());
-                p.transform.SetParent(sunProp.transform, false);
-                p.transform.localScale = Vector3.one * d.size;
-                var pm = new Material(unlit);
-                pm.color = d.col * 1.15f; // a touch of glow so bloom lifts them
-                p.GetComponent<MeshRenderer>().sharedMaterial = pm;
-                orrery.mats.Add(pm);
-
-                if (d.ring)
-                {
-                    // Saturn's ring: a flattened unlit disc.
-                    var ring = GameObject.CreatePrimitive(PrimitiveType.Cylinder);
-                    ring.name = "Ring";
-                    Destroy(ring.GetComponent<Collider>());
-                    ring.transform.SetParent(p.transform, false);
-                    ring.transform.localScale = new Vector3(2.3f, 0.02f, 2.3f);
-                    ring.transform.localRotation = Quaternion.Euler(24f, 0f, 0f);
-                    var rm = new Material(unlit);
-                    rm.color = new Color(0.85f, 0.78f, 0.60f, 1f) * 0.8f;
-                    ring.GetComponent<MeshRenderer>().sharedMaterial = rm;
-                    orrery.mats.Add(rm);
-                }
-
-                // Faint orbit ring so the architecture of the system reads.
-                var line = new GameObject(d.name + " Orbit").AddComponent<LineRenderer>();
-                line.transform.SetParent(sunProp.transform, false);
-                const int N = 96;
-                line.positionCount = N;
-                line.loop = true;
-                line.useWorldSpace = false;
-                line.widthMultiplier = 0.00045f;
-                line.material = new Material(lineShader);
-                orrery.mats.Add(line.material);
-                line.startColor = line.endColor = new Color(0.6f, 0.7f, 0.9f, 0.22f);
-                line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-                for (int k = 0; k < N; k++)
-                {
-                    float a = k / (float)N * Mathf.PI * 2f;
-                    line.SetPosition(k, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * d.orbit);
-                }
-
-                orrery.planets[i] = p.transform;
-                orrery.radii[i] = d.orbit;
-                // Kepler proportions (ω ∝ r^-1.5), scaled so Mercury laps
-                // visibly during the framing beat.
-                orrery.speeds[i] = 2.2f * Mathf.Pow(defs[0].orbit / d.orbit, 1.5f);
-                orrery.phases[i] = (i * 137.5f) * Mathf.Deg2Rad; // spread them out
-            }
-        }
-
-        /// <summary>Ticks the planets around their rings — self-updating so the
-        /// orrery lives through every journey stage without coroutine plumbing.</summary>
-        class Orrery : MonoBehaviour
-        {
-            public Transform[] planets;
-            public float[] radii, speeds, phases;
-            public System.Collections.Generic.List<Material> mats = new();
-
-            void Update()
-            {
-                float t = Time.time;
-                for (int i = 0; i < planets.Length; i++)
-                {
-                    if (planets[i] == null) continue;
-                    float a = phases[i] + t * speeds[i];
-                    planets[i].localPosition = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radii[i];
-                }
-            }
-
-            // The prop materials are created per run; a GameObject's death does
-            // not free them, so the orrery cleans up after itself.
-            void OnDestroy()
-            {
-                foreach (var m in mats)
-                    if (m != null) Destroy(m);
-            }
+            if (solarSystem != null) return;
+            solarSystem = SolarSystemRig.Spawn(controller.SunPositionWorld);
         }
 
         /// <summary>"We are here": a gold ring in the disk plane at the Sun's
@@ -375,11 +251,10 @@ namespace MilkyWay
 
         void DestroyProps()
         {
-            if (sunProp != null) Destroy(sunProp);
-            if (sunMat != null) Destroy(sunMat);
+            if (solarSystem != null) Destroy(solarSystem.gameObject);
             if (marker != null) Destroy(marker.gameObject);
             if (markerMat != null) Destroy(markerMat);
-            sunProp = null; sunMat = null; marker = null; markerMat = null;
+            solarSystem = null; marker = null; markerMat = null;
         }
 
         // ---------------- UI (the black-hole exhibit's shared factory) ------
