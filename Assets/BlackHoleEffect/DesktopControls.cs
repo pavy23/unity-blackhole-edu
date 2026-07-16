@@ -433,15 +433,32 @@ namespace BlackHoleEffect
             transform.LookAt(target.position + Vector3.up * 0.1f);
         }
 
+        /// <summary>
+        /// True while a narrated cinematic owns the shared visual state. The
+        /// presets and phenomenon demos write the same values the cinematics
+        /// animate (disk brightness, hole scale, spin) with no owner — a toggle
+        /// mid-fade captures a half-faded value as its "base" and restores the
+        /// wrong thing. The tour is deliberately NOT included: it invites preset
+        /// changes in its own hints, and resets its demos on every step.
+        /// </summary>
+        bool VisualsOwnedByCinematic =>
+            (intro != null && intro.IsPlaying) ||
+            (fallIn != null && fallIn.IsFalling) ||
+            (binary != null && binary.Running);
+
         void ReadHotkeys()
         {
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
+            bool owned = VisualsOwnedByCinematic;
             // Black-hole setup: numbers.
-            if (kb.digit1Key.wasPressedThisFrame) CycleColor();
-            if (kb.digit2Key.wasPressedThisFrame) CycleMass();
-            if (kb.digit3Key.wasPressedThisFrame && (binary == null || !binary.Running)) CycleSpin();
+            if (!owned)
+            {
+                if (kb.digit1Key.wasPressedThisFrame) CycleColor();
+                if (kb.digit2Key.wasPressedThisFrame) CycleMass();
+                if (kb.digit3Key.wasPressedThisFrame) CycleSpin();
+            }
             if (kb.digit4Key.wasPressedThisFrame) CycleComparison();
             // Experiences: F1–F4 (one at a time).
             if (kb.f1Key.wasPressedThisFrame && tour != null)
@@ -456,11 +473,14 @@ namespace BlackHoleEffect
                 if (kb.f4Key.wasPressedThisFrame && binary != null) binary.Begin();
             }
             // Phenomena & controls: letters.
-            if (kb.eKey.wasPressedThisFrame) ToggleEinstein();
-            if (kb.tKey.wasPressedThisFrame) ToggleSpaghetti();
-            if (kb.jKey.wasPressedThisFrame) ToggleJets();
-            if (kb.gKey.wasPressedThisFrame) ToggleLens();
-            if (kb.vKey.wasPressedThisFrame) ToggleLightCurve();
+            if (!owned)
+            {
+                if (kb.eKey.wasPressedThisFrame) ToggleEinstein();
+                if (kb.tKey.wasPressedThisFrame) ToggleSpaghetti();
+                if (kb.jKey.wasPressedThisFrame) ToggleJets();
+                if (kb.gKey.wasPressedThisFrame) ToggleLens();
+                if (kb.vKey.wasPressedThisFrame) ToggleLightCurve();
+            }
             if (kb.cKey.wasPressedThisFrame) CycleDifficulty();
             if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
@@ -483,10 +503,14 @@ namespace BlackHoleEffect
                 if (kb.dKey.isPressed) einsteinDemo.Nudge(12f * Time.deltaTime);
             }
 #else
+            bool owned = VisualsOwnedByCinematic;
             // Black-hole setup: numbers.
-            if (Input.GetKeyDown(KeyCode.Alpha1)) CycleColor();
-            if (Input.GetKeyDown(KeyCode.Alpha2)) CycleMass();
-            if (Input.GetKeyDown(KeyCode.Alpha3) && (binary == null || !binary.Running)) CycleSpin();
+            if (!owned)
+            {
+                if (Input.GetKeyDown(KeyCode.Alpha1)) CycleColor();
+                if (Input.GetKeyDown(KeyCode.Alpha2)) CycleMass();
+                if (Input.GetKeyDown(KeyCode.Alpha3)) CycleSpin();
+            }
             if (Input.GetKeyDown(KeyCode.Alpha4)) CycleComparison();
             // Experiences: F1–F4 (one at a time).
             if (Input.GetKeyDown(KeyCode.F1) && tour != null)
@@ -501,11 +525,14 @@ namespace BlackHoleEffect
                 if (Input.GetKeyDown(KeyCode.F4) && binary != null) binary.Begin();
             }
             // Phenomena & controls: letters.
-            if (Input.GetKeyDown(KeyCode.E)) ToggleEinstein();
-            if (Input.GetKeyDown(KeyCode.T)) ToggleSpaghetti();
-            if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
-            if (Input.GetKeyDown(KeyCode.G)) ToggleLens();
-            if (Input.GetKeyDown(KeyCode.V)) ToggleLightCurve();
+            if (!owned)
+            {
+                if (Input.GetKeyDown(KeyCode.E)) ToggleEinstein();
+                if (Input.GetKeyDown(KeyCode.T)) ToggleSpaghetti();
+                if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
+                if (Input.GetKeyDown(KeyCode.G)) ToggleLens();
+                if (Input.GetKeyDown(KeyCode.V)) ToggleLightCurve();
+            }
             if (Input.GetKeyDown(KeyCode.C)) CycleDifficulty();
             if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
             if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }

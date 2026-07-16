@@ -120,8 +120,11 @@ namespace BlackHoleEffect
                     Vector2 p = t.simPoints[i];
                     t.worldBuffer[i] = center + (right * p.x + up * p.y) * rs * 0.5f + toCam * 0.8f * rs;
                 }
+                // One batched upload — SetPositions copies positionCount entries.
+                // Point-by-point SetPosition was ~10k native calls per frame with
+                // a full sweep on screen.
                 t.line.positionCount = n;
-                for (int i = 0; i < n; i++) t.line.SetPosition(i, t.worldBuffer[i]);
+                t.line.SetPositions(t.worldBuffer);
 
                 // The photon itself: a glowing spark riding the trail head.
                 if (t.head != null)
@@ -206,9 +209,10 @@ namespace BlackHoleEffect
             {
                 // Edit mode: no per-frame Update, draw fully with current camera.
                 GetBasis(cam, center, out Vector3 right, out Vector3 up, out Vector3 toCam);
-                line.positionCount = pts.Count;
                 for (int i = 0; i < pts.Count; i++)
-                    line.SetPosition(i, center + (right * pts[i].x + up * pts[i].y) * rs * 0.5f + toCam * 0.8f * rs);
+                    trail.worldBuffer[i] = center + (right * pts[i].x + up * pts[i].y) * rs * 0.5f + toCam * 0.8f * rs;
+                line.positionCount = pts.Count;
+                line.SetPositions(trail.worldBuffer);
                 trail.revealed = pts.Count;
             }
             else

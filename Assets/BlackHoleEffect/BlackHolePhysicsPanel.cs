@@ -41,6 +41,7 @@ namespace BlackHoleEffect
         Text title, body, clockHeader, farLabel, probeLabel;
         RectTransform farHand, probeHand;
         float farAngle, probeAngle;
+        float refreshTimer;
 
         void OnEnable() => Build();
         void OnDisable() => Teardown();
@@ -97,8 +98,20 @@ namespace BlackHoleEffect
 
         void Update()
         {
-            RefreshText();
-            if (!show || !Application.isPlaying) return;
+            if (!Application.isPlaying)
+            {
+                RefreshText(); // edit mode: keep inspector tweaks live
+                return;
+            }
+
+            // The readout rebuilds all four languages of multi-line text and
+            // measures ~1 KB of garbage per call — refreshed every frame it was
+            // the app's largest steady allocator. 4 Hz is indistinguishable on
+            // screen, and every state change (language, presets, show toggles)
+            // already calls RefreshText() directly for an instant update.
+            refreshTimer -= Time.deltaTime;
+            if (refreshTimer <= 0f) { refreshTimer = 0.25f; RefreshText(); }
+            if (!show) return;
 
             // Both clocks tick at their own gravitational rate — the observer
             // clock genuinely follows the camera's current distance.

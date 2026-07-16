@@ -29,13 +29,25 @@ namespace BlackHoleEffect
         static readonly int SizeId = Shader.PropertyToID("_DemoStarSize");
 
         Renderer cachedRenderer;
+        bool wasActive;
 
+        // Force one Push on the first Update: if a crashed session left the
+        // demo star baked ON in the material asset, this heals it once.
+        void OnEnable() => wasActive = true;
         void OnDisable() => Push(false);
+
         void Update()
         {
             if (active && autoSweep && Application.isPlaying)
                 offsetDegrees = Mathf.PingPong(Time.time * sweepSpeed, sweepRange * 2f) - sweepRange;
-            Push(active);
+
+            // Push writes the SHARED material — the .mat asset itself. Doing
+            // that every frame (even just _DemoStarOn = 0 while off, and in
+            // edit mode via ExecuteAlways) kept the asset perpetually dirty;
+            // the _DemoStar* drift in version control came from exactly this.
+            // Touch it only while the demo runs, plus one closing write.
+            if (active || wasActive) Push(active);
+            wasActive = active;
         }
 
         /// <summary>Manual nudge from input controls; disables the auto sweep.</summary>
