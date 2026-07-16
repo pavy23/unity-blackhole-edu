@@ -24,12 +24,14 @@ namespace MilkyWay
         public NightSkyConnection nightSky;
         public AndromedaCollision andromeda;
         public MilkyWayTour tour;
+        public CosmicZoomOut cosmicZoom;
 
         bool AnyPlaying =>
             (journey != null && journey.IsPlaying) ||
             (nightSky != null && nightSky.IsPlaying) ||
             (andromeda != null && andromeda.IsPlaying) ||
-            (tour != null && tour.Running);
+            (tour != null && tour.Running) ||
+            (cosmicZoom != null && cosmicZoom.IsPlaying);
 
         float distance, yaw, pitch;
         GameObject helpBar;
@@ -63,6 +65,7 @@ namespace MilkyWay
             if (kb.f1Key.wasPressedThisFrame && journey != null && !AnyPlaying) journey.Begin();
             if (kb.f2Key.wasPressedThisFrame && nightSky != null && !AnyPlaying) nightSky.Begin();
             if (kb.f3Key.wasPressedThisFrame && andromeda != null && !AnyPlaying) andromeda.Begin();
+            if (kb.f5Key.wasPressedThisFrame && cosmicZoom != null && !AnyPlaying) cosmicZoom.Begin();
             if (kb.f4Key.wasPressedThisFrame && tour != null)
             {
                 if (tour.Running) tour.StopTour();
@@ -79,6 +82,7 @@ namespace MilkyWay
             if (Input.GetKeyDown(KeyCode.F1) && journey != null && !AnyPlaying) journey.Begin();
             if (Input.GetKeyDown(KeyCode.F2) && nightSky != null && !AnyPlaying) nightSky.Begin();
             if (Input.GetKeyDown(KeyCode.F3) && andromeda != null && !AnyPlaying) andromeda.Begin();
+            if (Input.GetKeyDown(KeyCode.F5) && cosmicZoom != null && !AnyPlaying) cosmicZoom.Begin();
             if (Input.GetKeyDown(KeyCode.F4) && tour != null)
             {
                 if (tour.Running) tour.StopTour();
@@ -144,11 +148,11 @@ namespace MilkyWay
         {
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
             var bar = BlackHoleUI.MakePanel(canvas.transform, "MW Help Bar",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1080f, 40f),
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 18f), new Vector2(1240f, 40f),
                 accentLine: false);
             helpBar = bar.gameObject;
             help = BlackHoleUI.MakeText(bar, "Text", 15, BlackHoleUI.TextSecondary, TextAnchor.MiddleCenter,
-                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1040f, 32f));
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1200f, 32f));
             UpdateHelpText();
         }
 
@@ -158,10 +162,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘 연결   " + Key("F3") + "안드로메다 충돌   " + Key("F4") + "가이드 투어   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("F1") + "zoom journey   " + Key("F2") + "night-sky link   " + Key("F3") + "Andromeda   " + Key("F4") + "guided tour   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
-                Key("F1") + "ズームの旅   " + Key("F2") + "夜空とのつながり   " + Key("F3") + "アンドロメダ衝突   " + Key("F4") + "ガイドツアー   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("F1") + "缩放之旅   " + Key("F2") + "夜空的连接   " + Key("F3") + "仙女座相撞   " + Key("F4") + "导览之旅   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("F1") + "줌 여행   " + Key("F2") + "밤하늘 연결   " + Key("F3") + "안드로메다 충돌   " + Key("F4") + "가이드 투어   " + Key("F5") + "우주 줌아웃   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("F1") + "zoom journey   " + Key("F2") + "night-sky link   " + Key("F3") + "Andromeda   " + Key("F4") + "guided tour   " + Key("F5") + "cosmic zoom-out   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("K") + "language   " + Key("H") + "help",
+                Key("F1") + "ズームの旅   " + Key("F2") + "夜空とのつながり   " + Key("F3") + "アンドロメダ衝突   " + Key("F4") + "ガイドツアー   " + Key("F5") + "宇宙ズームアウト   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("F1") + "缩放之旅   " + Key("F2") + "夜空的连接   " + Key("F3") + "仙女座相撞   " + Key("F4") + "导览之旅   " + Key("F5") + "宇宙缩放   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }

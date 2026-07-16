@@ -111,6 +111,17 @@ namespace MilkyWay.Editor
             tour.controller = controller;
             tour.orbit = orbit;
 
+            // The universe beyond: impostor-galaxy field, dormant (renderer
+            // off, mesh unbuilt) until the cosmic zoom-out first runs.
+            var webGO = new GameObject("Cosmic Web");
+            var web = webGO.AddComponent<CosmicWebField>();
+            webGO.GetComponent<MeshRenderer>().enabled = false;
+
+            var cosmic = camGO.AddComponent<CosmicZoomOut>();
+            cosmic.controller = controller;
+            cosmic.orbit = orbit;
+            cosmic.field = web;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -118,6 +129,7 @@ namespace MilkyWay.Editor
             controls.nightSky = nightSky;
             controls.andromeda = m31;
             controls.tour = tour;
+            controls.cosmicZoom = cosmic;
 
             SetupPostProcessing();
 
