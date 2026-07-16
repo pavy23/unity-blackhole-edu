@@ -95,6 +95,15 @@ namespace MilkyWay.Editor
             orbit.bobAmplitude = 0.5f;
             orbit.bobPeriod = 46f;
 
+            var journey = camGO.AddComponent<ZoomJourney>();
+            journey.controller = controller;
+            journey.orbit = orbit;
+
+            var controls = camGO.AddComponent<MilkyWayControls>();
+            controls.controller = controller;
+            controls.orbit = orbit;
+            controls.journey = journey;
+
             SetupPostProcessing();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
