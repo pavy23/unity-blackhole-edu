@@ -96,9 +96,12 @@ namespace MilkyWay
         // origin, disk radius 16, Sun at (8.2, 0, 0), bar leaning 27° off +x.
         static readonly Step[] Steps =
         {
+            // The title is NOT the narration's first sentence — the body text
+            // below it is (subtitle == voice), and a verbatim repeat looked
+            // like a rendering bug on the panel.
             new Step { pos = new Vector3(0f, 16f, -30f), look = Vector3.zero,
-                title = "우리 은하 투어에 오신 것을 환영합니다", titleEn = "Welcome to the Milky Way Tour",
-                titleJa = "天の川銀河ツアーへようこそ", titleZh = "欢迎来到银河系之旅" },
+                title = "투어를 시작합니다 — 우리 은하", titleEn = "The Tour Begins — Our Galaxy",
+                titleJa = "ツアー開始 — 私たちの銀河", titleZh = "旅程开始 — 我们的银河" },
             new Step { pos = new Vector3(3f, 25f, -9f), look = Vector3.zero,
                 title = "1. 벌지와 막대", titleEn = "1. The Bulge and the Bar",
                 titleJa = "1. バルジと棒", titleZh = "1. 核球与棒" },

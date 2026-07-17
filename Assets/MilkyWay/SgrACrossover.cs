@@ -43,6 +43,17 @@ namespace MilkyWay
         RectTransform captionPanel;
         Button stopButton;
 
+        // The S-star swarm: the innermost stars on tight, fast Kepler-ish
+        // ellipses around the invisible point. Beat 1's whole story ("stars
+        // whip around something unseen") happens deep in the dust where the
+        // frame was otherwise a featureless brown wall — these ARE the shot.
+        GameObject swarm;
+        Transform[] sstars;
+        float[] sA, sE, sTh, sK;
+        Quaternion[] sPlane;
+        Material sstarMat;
+        Texture2D sstarTex;
+
         public static readonly string[] NarrationLines =
         {
             "이제 은하의 심장으로 들어갑니다. 나선팔을 지나고 막대를 지나면 별들이 점점 붐빕니다 — 은하 중심 근처는 태양 주변보다 별이 수백만 배나 빽빽한 곳입니다.",
@@ -88,6 +99,7 @@ namespace MilkyWay
 
         void RestoreAll()
         {
+            DestroySwarm();
             var cam = GetComponent<Camera>();
             if (cam != null) { cam.nearClipPlane = savedNear; cam.farClipPlane = savedFar; }
             controller.brightness = savedBrightness;
@@ -99,6 +111,81 @@ namespace MilkyWay
             HideCaption();
             ShowStop(false);
             if (orbit != null) orbit.enabled = true;
+        }
+
+        // ---------------- the S-star swarm ----------------
+
+        void SpawnSwarm()
+        {
+            if (swarm != null) return;
+            swarm = new GameObject("S-Stars");
+            const int n = 9;
+            sstars = new Transform[n]; sA = new float[n]; sE = new float[n];
+            sTh = new float[n]; sK = new float[n]; sPlane = new Quaternion[n];
+
+            sstarTex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
+            for (int y = 0; y < 64; y++)
+                for (int x = 0; x < 64; x++)
+                {
+                    float dx = (x - 31.5f) / 28f, dy = (y - 31.5f) / 28f;
+                    float g = Mathf.Exp(-(dx * dx + dy * dy) * 3.2f);
+                    sstarTex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(g)));
+                }
+            sstarTex.Apply();
+            sstarMat = new Material(Shader.Find("Sprites/Default"))
+                { mainTexture = sstarTex, renderQueue = 3100 };
+
+            var rng = new System.Random(41);
+            for (int i = 0; i < n; i++)
+            {
+                var go = GameObject.CreatePrimitive(PrimitiveType.Quad);
+                Destroy(go.GetComponent<Collider>());
+                go.name = "S" + i;
+                go.transform.SetParent(swarm.transform, false);
+                go.transform.localScale = Vector3.one * (0.010f + 0.008f * (float)rng.NextDouble());
+                var mr = go.GetComponent<MeshRenderer>();
+                mr.sharedMaterial = sstarMat;
+                mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                mr.receiveShadows = false;
+                sA[i] = 0.09f + 0.30f * (float)rng.NextDouble();
+                sE[i] = 0.35f + 0.45f * (float)rng.NextDouble();
+                sTh[i] = (float)rng.NextDouble() * Mathf.PI * 2f;
+                sK[i] = 0.9f + 0.5f * (float)rng.NextDouble();
+                sPlane[i] = Quaternion.Euler(360f * (float)rng.NextDouble(),
+                    360f * (float)rng.NextDouble(), 360f * (float)rng.NextDouble());
+                sstars[i] = go.transform;
+            }
+            SetSwarmAlpha(0f);
+        }
+
+        void SetSwarmAlpha(float a)
+        {
+            if (sstarMat != null)
+                sstarMat.color = new Color(1f, 0.93f, 0.78f, Mathf.Clamp01(a));
+        }
+
+        void UpdateSwarm(float dt)
+        {
+            if (swarm == null) return;
+            for (int i = 0; i < sstars.Length; i++)
+            {
+                // Sweep rate ~ r^-1.5: the pericentre whip IS the physics.
+                float r = sA[i] * (1f - sE[i] * sE[i]) / (1f + sE[i] * Mathf.Cos(sTh[i]));
+                sTh[i] += dt * sK[i] * Mathf.Pow(Mathf.Max(r, 0.02f), -1.5f) * 0.06f;
+                r = sA[i] * (1f - sE[i] * sE[i]) / (1f + sE[i] * Mathf.Cos(sTh[i]));
+                sstars[i].position = sPlane[i] *
+                    new Vector3(Mathf.Cos(sTh[i]) * r, 0f, Mathf.Sin(sTh[i]) * r);
+                // Sprites/Default culls off, so any camera-ish facing works.
+                sstars[i].rotation = Quaternion.LookRotation(sstars[i].position - transform.position);
+            }
+        }
+
+        void DestroySwarm()
+        {
+            if (swarm != null) Destroy(swarm);
+            if (sstarMat != null) Destroy(sstarMat);
+            if (sstarTex != null) Destroy(sstarTex);
+            swarm = null; sstarMat = null; sstarTex = null;
         }
 
         // A beat may only fire once its predecessor's voice has finished —
@@ -124,6 +211,8 @@ namespace MilkyWay
             savedStarBrightness = controller.starBrightness;
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
+            NarrationManager.Instance.Preload("mw_sgr_0", "mw_sgr_1", "mw_sgr_2");
+            SpawnSwarm();
 
             // Dive along whatever azimuth the visitor is at — the centre is
             // the destination, the direction is theirs.
@@ -157,9 +246,16 @@ namespace MilkyWay
                 transform.LookAt(Vector3.zero);
                 if (cam != null) cam.nearClipPlane = Mathf.Max(d * 0.002f, 0.0006f);
 
-                controller.brightness = Mathf.Lerp(savedBrightness, 0.9f, Mathf.SmoothStep(0f, 1f, u));
-                controller.starBrightness = Mathf.Lerp(savedStarBrightness, 0.7f, u);
+                // The old ride dimmed the core to 0.9/0.7 "so it stays
+                // readable" — the actual result was an empty brown wall while
+                // the narration said "millions of times denser". Keep the
+                // exposure up; the crowding is the point.
+                controller.brightness = Mathf.Lerp(savedBrightness, 1.05f, Mathf.SmoothStep(0f, 1f, u));
+                controller.starBrightness = Mathf.Lerp(savedStarBrightness, 0.95f, u);
                 controller.Apply();
+
+                UpdateSwarm(Time.deltaTime);
+                SetSwarmAlpha(Mathf.InverseLerp(0.55f, 0.75f, u));
 
                 if (stage == 0 && u > 0.52f && NarrationDone)
                 {
@@ -173,6 +269,7 @@ namespace MilkyWay
             while (!NarrationDone)
             {
                 transform.RotateAround(Vector3.zero, Vector3.up, 1.2f * Time.deltaTime);
+                UpdateSwarm(Time.deltaTime);
                 yield return null;
             }
             float len2 = Narrate(2);
@@ -180,6 +277,7 @@ namespace MilkyWay
             for (float t = 0f, dur = Mathf.Max(6f, len2 - 1.5f); t < dur; t += Time.deltaTime)
             {
                 transform.RotateAround(Vector3.zero, Vector3.up, 1.2f * Time.deltaTime);
+                UpdateSwarm(Time.deltaTime);
                 yield return null;
             }
 
@@ -189,9 +287,11 @@ namespace MilkyWay
             for (float t = 0f; t < 1.8f; t += Time.deltaTime)
             {
                 fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 1.8f));
+                UpdateSwarm(Time.deltaTime);
                 yield return null;
             }
             fade.color = Color.black;
+            DestroySwarm();
 
             controller.brightness = savedBrightness;
             controller.starBrightness = savedStarBrightness;
