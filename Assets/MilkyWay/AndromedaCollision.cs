@@ -147,6 +147,9 @@ namespace MilkyWay
             savedMWRot = mw.rotation;
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
+            // Beats 1-3 fire mid-encounter; loading their mp3s at that moment
+            // (DecompressOnLoad, main thread) stutters the dance.
+            NarrationManager.Instance.Preload("mw_m31_0", "mw_m31_1", "mw_m31_2", "mw_m31_3", "mw_m31_4");
             SpawnAndromeda();
 
             // ---- framing ----------------------------------------------------
@@ -156,10 +159,13 @@ namespace MilkyWay
                 "The Andromeda galaxy is approaching us right now, at 110 km every second.\nLet's run time forward — five billion years in one minute.",
                 "アンドロメダ銀河は今この瞬間も、秒速110kmで私たちに近づいています。\n時間を早送りして、約50億年を1分で見てみましょう。",
                 "仙女座星系此刻正以每秒110公里的速度向我们靠近。\n让我们快进时间——用一分钟看完约50亿年。"));
+            camLook = mw.position;
             for (float t = 0f, dur = Mathf.Max(7f, len + 0.5f); t < dur; t += Time.deltaTime)
             {
-                PlaceBodies(0f);
-                PlaceCamera(0f, Time.deltaTime);
+                // The infall has already begun during the framing shot — a
+                // static pair reads as a screensaver, not a countdown.
+                PlaceBodies(0f, Mathf.Lerp(368f, 340f, t / dur), 0f);
+                PlaceCamera(340f, Time.deltaTime, -1f);
                 yield return null;
             }
 
@@ -174,7 +180,7 @@ namespace MilkyWay
                 // Orbit sweep: faster when close (a nod to Kepler), integrated.
                 theta += Time.deltaTime * (34f / (sep + 12f));
                 PlaceBodies(u, sep, theta);
-                PlaceCamera(sep, Time.deltaTime);
+                PlaceCamera(sep, Time.deltaTime, u);
                 Tides(u, sep);
                 YearLine(u);
 
@@ -211,7 +217,7 @@ namespace MilkyWay
             // ---- epilogue: the merged elliptical ------------------------------
             while (!NarrationDone)
             {
-                PlaceCamera(0f, Time.deltaTime);
+                PlaceCamera(0f, Time.deltaTime, 1f);
                 yield return null;
             }
             len = Narrate(4);
@@ -222,11 +228,41 @@ namespace MilkyWay
                 "恒星之间的空间无比辽阔，几乎不会有恒星相撞。\n太阳系会安然无恙——只是被带到新星系的另一个角落。"));
             for (float t = 0f, dur = Mathf.Max(9f, len + 0.5f); t < dur; t += Time.deltaTime)
             {
-                PlaceCamera(0f, Time.deltaTime);
+                PlaceCamera(0f, Time.deltaTime, 1f);
                 yield return null;
             }
 
-            // Time rewinds: the exhibit returns to today's Milky Way.
+            // ---- time rewinds ------------------------------------------------
+            // The hard cut back to today's spiral read as a glitch. Run the
+            // whole encounter BACKWARDS in three seconds — the year counter
+            // spins down, Milkomeda unmixes, M31 retreats — then glide home.
+            HideCaption();
+            const float rewindDur = 3.2f;
+            for (float t = 0f; t < rewindDur; t += Time.deltaTime)
+            {
+                float u = 1f - Mathf.SmoothStep(0f, 1f, t / rewindDur);
+                float sep = Separation(u);
+                theta -= Time.deltaTime * (34f / (sep + 12f)) * 6f; // unwinding fast
+                PlaceBodies(u, sep, theta);
+                PlaceCamera(sep, Time.deltaTime, u);
+                Tides(u, sep);
+                YearLine(u);
+                yield return null;
+            }
+            // Glide everything home together — restoring the Milky Way to the
+            // origin in one frame while it fills the screen reads as a pop.
+            DestroyAndromeda();
+            Vector3 fromPos = transform.position;
+            Quaternion fromRot = transform.rotation;
+            Vector3 mwFrom = mw.position;
+            for (float t = 0f, dur = 1.8f; t < dur; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0f, 1f, t / dur);
+                mw.position = Vector3.Lerp(mwFrom, savedMWPos, k);
+                transform.position = Vector3.Lerp(fromPos, savedCamPos, k);
+                transform.rotation = Quaternion.Slerp(fromRot, savedCamRot, k);
+                yield return null;
+            }
             transform.position = savedCamPos;
             transform.rotation = savedCamRot;
             Finish();
@@ -258,18 +294,43 @@ namespace MilkyWay
                 andromeda.transform.position = offset * 0.5f;
         }
 
-        void PlaceCamera(float sep, float dt)
+        /// <summary>u &lt; 0 = the framing shot. At 340 kpc separation no field
+        /// of view holds both galaxies at a readable size, so the opening
+        /// stands BEHIND home instead: the Milky Way big in the foreground,
+        /// M31 a small disk coming straight at us beyond it. The wide two-body
+        /// orbit blends in over the first sixth of the encounter.</summary>
+        void PlaceCamera(float sep, float dt, float u)
         {
-            // Wide enough to hold both bodies; drifts slowly so the dance reads.
-            float dist = Mathf.Clamp(sep * 1.15f + 58f, 85f, 330f);
-            camYaw += dt * 2.2f;
-            var dir = (Quaternion.AngleAxis(camYaw, Vector3.up)
-                     * new Vector3(0f, 0.5f, -1f)).normalized;
-            Vector3 want = dir * dist;
+            Vector3 m31Pos = andromeda != null ? andromeda.transform.position : Vector3.zero;
+            Vector3 axis = (m31Pos - mw.position).normalized;
+
+            Vector3 focusWant, want;
+            if (u < 0f)
+            {
+                focusWant = Vector3.Lerp(mw.position, m31Pos, 0.45f);
+                want = mw.position - axis * 175f + Vector3.up * 55f;
+            }
+            else
+            {
+                float wide = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.02f, 0.16f, u));
+                // Aim a touch below the pair so the caption panel doesn't
+                // swallow whichever galaxy swings through the lower frame.
+                Vector3 centre = Vector3.down * (5f + sep * 0.05f);
+                focusWant = Vector3.Lerp(Vector3.Lerp(mw.position, m31Pos, 0.45f), centre, wide);
+                float dist = Mathf.Clamp(sep * 1.15f + 58f, 85f, 330f);
+                camYaw += dt * 2.2f;
+                var dir = (Quaternion.AngleAxis(camYaw, Vector3.up)
+                         * new Vector3(0f, 0.5f, -1f)).normalized;
+                Vector3 wideWant = dir * dist;
+                Vector3 nearWant = mw.position - axis * 175f + Vector3.up * 55f;
+                want = Vector3.Lerp(nearWant, wideWant, wide);
+            }
             transform.position = Vector3.Lerp(transform.position, want, 1f - Mathf.Exp(-dt * 1.6f));
-            transform.LookAt(Vector3.zero);
+            camLook = Vector3.Lerp(camLook, focusWant, 1f - Mathf.Exp(-dt * 2.0f));
+            transform.LookAt(camLook);
         }
         float camYaw;
+        Vector3 camLook;
 
         void Tides(float u, float sep)
         {
@@ -295,7 +356,9 @@ namespace MilkyWay
             if (controller.volumeMaterial != null)
             {
                 controller.volumeMaterial.SetFloat(BulgeBoostId, Mathf.Lerp(0.9f, 2.4f, merge));
-                controller.volumeMaterial.SetFloat(DustId, Mathf.Lerp(3.4f, 0.6f, merge));
+                // Ellipticals have no dust lane — 0.6 left a dark stripe across
+                // Milkomeda that argued with the "elliptical remains" line.
+                controller.volumeMaterial.SetFloat(DustId, Mathf.Lerp(3.4f, 0.12f, merge));
             }
         }
 
