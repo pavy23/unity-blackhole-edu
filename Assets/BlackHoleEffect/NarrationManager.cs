@@ -59,6 +59,20 @@ namespace BlackHoleEffect
             if (source != null) source.Stop();
         }
 
+        /// <summary>Loads and decompresses clips ahead of time. Resources.Load
+        /// of a DecompressOnLoad mp3 stalls the main thread for a noticeable
+        /// fraction of a frame — call this while the camera is still, so beats
+        /// that fire mid-motion don't hitch.</summary>
+        public void Preload(params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                var clip = Resources.Load<AudioClip>("Narration/" + Loc.NarrationFolder + key);
+                if (clip != null && clip.loadState == AudioDataLoadState.Unloaded)
+                    clip.LoadAudioData();
+            }
+        }
+
         void Update()
         {
             if (ambience == null)

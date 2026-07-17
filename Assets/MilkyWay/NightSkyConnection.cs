@@ -112,6 +112,10 @@ namespace MilkyWay
             savedStarBrightness = controller.starBrightness;
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
+            // Beats 2 and 3 fire while the camera is climbing — loading their
+            // mp3s at that moment (DecompressOnLoad, main thread) reads as a
+            // stutter in the ascent. Pay the cost now, while nothing moves.
+            NarrationManager.Instance.Preload("mw_sky_0", "mw_sky_1", "mw_sky_2", "mw_sky_3");
 
             Vector3 sun = controller.SunPositionWorld;
             Vector3 toCentre = (Vector3.zero - sun).normalized;
@@ -183,7 +187,7 @@ namespace MilkyWay
                 "现在我们升空。\n天上的那条带……原来是这个圆盘，从内部侧看的样子。"));
 
             float h0 = 0.02f, h1 = 26f;
-            int stage = 0;
+            int beat = 0;
             for (float t = 0f; t < liftDuration; t += Time.deltaTime)
             {
                 float u = Mathf.Clamp01(t / liftDuration);
@@ -193,6 +197,10 @@ namespace MilkyWay
                 // top end still lands at the same overview height.
                 float uh = Mathf.Pow(u, 0.62f);
                 float h = Mathf.Exp(Mathf.Lerp(Mathf.Log(h0), Mathf.Log(h1), uh));
+                // The pow-log ramp is still ACCELERATING at u=1 — without an
+                // arrival ease the camera slams from top speed to a dead stop
+                // in one frame. Blend into the final height with zero slope.
+                h = Mathf.Lerp(h, h1, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.82f, 1f, u)));
                 // Rise along the STAGE's up (world-up drifts in as height
                 // makes the tilt meaningless), drifting outward so the whole
                 // disk fits.
@@ -215,12 +223,15 @@ namespace MilkyWay
                 // and only then do the leftovers fade — ground first, the
                 // photo sky a beat later, once the volumetric band has taken
                 // over the same part of the sky.
-                if (stage != null)
+                if (stage != null && stage.activeSelf)
                 {
                     float aGround = 1f - Mathf.InverseLerp(0.22f, 0.42f, u);
                     float aDome = 1f - Mathf.InverseLerp(0.30f, 0.56f, u);
                     FadeStage(aGround, aDome);
-                    if (aDome <= 0f) DestroyGround();
+                    // Once fully faded just HIDE it — destroying the dome mesh
+                    // and materials mid-ascent hitches the very frames the
+                    // camera is moving fastest. Finish() destroys for real.
+                    if (aDome <= 0f) stage.SetActive(false);
                 }
 
                 // Exposure brightens as we leave the disk.
@@ -230,9 +241,9 @@ namespace MilkyWay
                 controller.Apply();
                 if (cam != null) cam.fieldOfView = Mathf.Lerp(58f, 40f, Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.25f, 0.75f, u)));
 
-                if (stage == 0 && u > 0.55f && NarrationDone)
+                if (beat == 0 && u > 0.55f && NarrationDone)
                 {
-                    stage = 1; len = Narrate(3);
+                    beat = 1; len = Narrate(3);
                     Caption(Loc.T(
                         "은하수를 본 적이 있다면 — 이미 우리 은하의 옆모습을 본 것입니다.",
                         "If you have ever seen the Milky Way, you have already seen our galaxy — edge-on.",
