@@ -131,6 +131,11 @@ namespace MilkyWay.Editor
             rotLab.controller = controller;
             rotLab.orbit = orbit;
 
+            // Galaxy zoo (F8): the Hubble sequence, volumetric specimens.
+            var zoo = camGO.AddComponent<GalaxyZoo>();
+            zoo.controller = controller;
+            zoo.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -141,6 +146,7 @@ namespace MilkyWay.Editor
             controls.cosmicZoom = cosmic;
             controls.solarTour = solTour;
             controls.rotationLab = rotLab;
+            controls.zoo = zoo;
 
             SetupPostProcessing();
 
