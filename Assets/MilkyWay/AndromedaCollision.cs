@@ -29,7 +29,7 @@ namespace MilkyWay
         public CinematicOrbit orbit;
 
         [Tooltip("Seconds for the whole five-billion-year story.")]
-        public float duration = 52f;
+        public float duration = 36f;
 
         public bool IsPlaying { get; private set; }
 
@@ -40,11 +40,53 @@ namespace MilkyWay
 
         GameObject andromeda;
         Material m31Volume, m31Stars;
+        float m31DustInitial = 3.4f;
         Transform mw;
 
         Text caption, yearline;
         RectTransform captionPanel;
         Button stopButton;
+
+        // Subtitle == voice (the exhibit-wide convention): these are the
+        // exact texts the mw_m31_N clips are generated from. Line 0 carries
+        // the 2025 honesty update — Sawala et al. (Nature Astronomy 2025)
+        // put the merger at roughly a coin flip within 10 Gyr once the LMC's
+        // pull and measurement uncertainty are included, so the encounter is
+        // presented as the famous IF, not a certainty.
+        public static readonly string[] NarrationLines =
+        {
+            "안드로메다 은하는 지금도 초속 110km로 우리를 향해 다가오고 있습니다. 정말 충돌할지는, 최신 연구에 따르면 반반입니다. 만약 충돌한다면 — 그 모습을, 50억 년을 1분에 담아 미리 봅니다.",
+            "첫 만남 — 두 은하는 스쳐 지나가며, 조석력이 서로의 별들을 길게 뽑아 꼬리를 만듭니다.",
+            "서로를 빠져나가려 하지만 — 보이지 않는 암흑물질 헤일로의 중력이 놓아주지 않습니다.",
+            "결국 하나가 됩니다 — 밀코메다.\n나선팔은 흩어지고, 거대한 타원은하가 남습니다.",
+            "별들 사이는 너무나 넓어서, 별끼리 부딪히는 일은 거의 없습니다.\n태양계는 무사히 — 다만 새 은하의 다른 자리로 옮겨질 것입니다.",
+        };
+        public static readonly string[] NarrationLinesEn =
+        {
+            "The Andromeda galaxy is approaching us right now, at 110 kilometres every second. Whether the two will truly collide is, by the latest research, a coin flip. If they do — here is that future, five billion years in one minute.",
+            "First pass — the galaxies sweep by each other, and tides draw their stars out into long tails.",
+            "They try to escape each other — but the gravity of their invisible dark-matter halos will not let go.",
+            "In the end they become one — Milkomeda.\nThe spiral arms dissolve, and a giant elliptical remains.",
+            "Space between stars is so vast that almost none of them ever collide.\nThe solar system survives — carried to a new place in a new galaxy.",
+        };
+        public static readonly string[] NarrationLinesJa =
+        {
+            "アンドロメダ銀河は今この瞬間も、秒速110kmで私たちに近づいています。本当に衝突するかどうかは、最新の研究では五分五分。もし衝突するなら — その未来を、50億年を1分にして先に見てみましょう。",
+            "最初の遭遇 — 二つの銀河はすれ違いざま、潮汐力が互いの星を長い尾に引き出します。",
+            "互いに離れようとしますが — 見えないダークマターハローの重力が逃がしません。",
+            "ついに一つになります — ミルコメダ。\n渦状腕はほどけ、巨大な楕円銀河が残ります。",
+            "星と星のあいだは広大で、星同士がぶつかることはほとんどありません。\n太陽系は無事に — ただ、新しい銀河の別の場所へ運ばれるだけです。",
+        };
+        public static readonly string[] NarrationLinesZh =
+        {
+            "仙女座星系此刻正以每秒110公里的速度向我们靠近。它们是否真的会相撞，最新研究认为是五五开。如果相撞——我们把那个未来、五十亿年压缩成一分钟，先看一遍。",
+            "第一次交会——两个星系擦肩而过，潮汐力把彼此的恒星拉成长长的尾巴。",
+            "它们试图挣脱彼此——但看不见的暗物质晕的引力不肯放手。",
+            "最终它们合而为一——银河仙女星系。\n旋臂消散，留下一个巨大的椭圆星系。",
+            "恒星之间的空间无比辽阔，几乎不会有恒星相撞。\n太阳系会安然无恙——只是被带到新星系的另一个角落。",
+        };
+
+        void CaptionBeat(int i) => Caption(Loc.T(NarrationLines[i], NarrationLinesEn[i], NarrationLinesJa[i], NarrationLinesZh[i]));
 
         static readonly int TidalDirId = Shader.PropertyToID("_TidalDir");
         static readonly int TidalAmountId = Shader.PropertyToID("_TidalAmount");
@@ -154,11 +196,7 @@ namespace MilkyWay
 
             // ---- framing ----------------------------------------------------
             float len = Narrate(0);
-            Caption(Loc.T(
-                "안드로메다 은하는 지금도 초속 110km로 우리를 향해 다가오고 있습니다.\n시간을 빠르게 돌려, 약 50억 년을 1분에 봅니다.",
-                "The Andromeda galaxy is approaching us right now, at 110 km every second.\nLet's run time forward — five billion years in one minute.",
-                "アンドロメダ銀河は今この瞬間も、秒速110kmで私たちに近づいています。\n時間を早送りして、約50億年を1分で見てみましょう。",
-                "仙女座星系此刻正以每秒110公里的速度向我们靠近。\n让我们快进时间——用一分钟看完约50亿年。"));
+            CaptionBeat(0);
             camLook = mw.position;
             for (float t = 0f, dur = Mathf.Max(7f, len + 0.5f); t < dur; t += Time.deltaTime)
             {
@@ -186,46 +224,39 @@ namespace MilkyWay
 
                 if (stage == 0 && u > 0.30f && NarrationDone)
                 {
-                    stage = 1; Narrate(1);
-                    Caption(Loc.T(
-                        "첫 만남 — 두 은하는 스쳐 지나가며, 조석력이 서로의 별들을 길게 뽑아 꼬리를 만듭니다.",
-                        "First pass — the galaxies sweep by each other, and tides draw their stars out into long tails.",
-                        "最初の遭遇 — 二つの銀河はすれ違いざま、潮汐力が互いの星を長い尾に引き出します。",
-                        "第一次交会——两个星系擦肩而过，潮汐力把彼此的恒星拉成长长的尾巴。"));
+                    stage = 1; Narrate(1); CaptionBeat(1);
                 }
                 else if (stage == 1 && u > 0.52f && NarrationDone)
                 {
-                    stage = 2; Narrate(2);
-                    Caption(Loc.T(
-                        "서로를 빠져나가려 하지만 — 보이지 않는 암흑물질 헤일로의 중력이 놓아주지 않습니다.",
-                        "They try to escape each other — but the gravity of their invisible dark-matter halos will not let go.",
-                        "互いに離れようとしますが — 見えないダークマターハローの重力が逃がしません。",
-                        "它们试图挣脱彼此——但看不见的暗物质晕的引力不肯放手。"));
+                    stage = 2; Narrate(2); CaptionBeat(2);
                 }
                 else if (stage == 2 && u > 0.80f && NarrationDone)
                 {
-                    stage = 3; Narrate(3);
-                    Caption(Loc.T(
-                        "결국 하나가 됩니다 — 밀코메다.\n나선팔은 흩어지고, 거대한 타원은하가 남습니다.",
-                        "In the end they become one — Milkomeda.\nThe spiral arms dissolve, and a giant elliptical remains.",
-                        "ついに一つになります — ミルコメダ。\n渦状腕はほどけ、巨大な楕円銀河が残ります。",
-                        "最终它们合而为一——银河仙女星系。\n旋臂消散，留下一个巨大的椭圆星系。"));
+                    stage = 3; Narrate(3); CaptionBeat(3);
                 }
                 yield return null;
             }
 
             // ---- epilogue: the merged elliptical ------------------------------
+            // The faster dance can end before the longer (ja, ko) voice tracks
+            // clear their gates — the Milkomeda beat must never be skipped, so
+            // catch it up over the merged body instead of dropping it.
+            if (stage == 2)
+            {
+                while (!NarrationDone)
+                {
+                    PlaceCamera(0f, Time.deltaTime, 1f);
+                    yield return null;
+                }
+                stage = 3; Narrate(3); CaptionBeat(3);
+            }
             while (!NarrationDone)
             {
                 PlaceCamera(0f, Time.deltaTime, 1f);
                 yield return null;
             }
             len = Narrate(4);
-            Caption(Loc.T(
-                "별들 사이는 너무나 넓어서, 별끼리 부딪히는 일은 거의 없습니다.\n태양계는 무사히 — 다만 새 은하의 다른 자리로 옮겨질 것입니다.",
-                "Space between stars is so vast that almost none of them ever collide.\nThe solar system survives — carried to a new place in a new galaxy.",
-                "星と星のあいだは広大で、星同士がぶつかることはほとんどありません。\n太陽系は無事に — ただ、新しい銀河の別の場所へ運ばれるだけです。",
-                "恒星之间的空间无比辽阔，几乎不会有恒星相撞。\n太阳系会安然无恙——只是被带到新星系的另一个角落。"));
+            CaptionBeat(4);
             for (float t = 0f, dur = Mathf.Max(9f, len + 0.5f); t < dur; t += Time.deltaTime)
             {
                 PlaceCamera(0f, Time.deltaTime, 1f);
@@ -345,20 +376,25 @@ namespace MilkyWay
             if (andromeda != null)
                 ApplyEncounter(m31Volume, m31Stars, andromeda.transform, mw.position, tide, merge);
 
-            // Andromeda fades into the common body at the very end.
+            // Andromeda fades into the common body at the very end. Emission
+            // AND extinction: brightness alone leaves an invisible dust slab
+            // that still absorbs — it read as a dark stripe across Milkomeda
+            // (and survived zeroing the Milky Way's own dust, because it was
+            // never the Milky Way's).
             if (m31Volume != null)
             {
                 float keep = 1f - merge;
                 m31Volume.SetFloat(BrightnessId, 2.2f * Mathf.Max(keep, 0.001f));
+                m31Volume.SetFloat(DustId, m31DustInitial * keep);
                 if (m31Stars != null) m31Stars.SetFloat(StarBrightId, 1.15f * keep);
             }
             // The survivor takes the elliptical look.
             if (controller.volumeMaterial != null)
             {
                 controller.volumeMaterial.SetFloat(BulgeBoostId, Mathf.Lerp(0.9f, 2.4f, merge));
-                // Ellipticals have no dust lane — 0.6 left a dark stripe across
-                // Milkomeda that argued with the "elliptical remains" line.
-                controller.volumeMaterial.SetFloat(DustId, Mathf.Lerp(3.4f, 0.12f, merge));
+                // Ellipticals have no dust lane — even 0.12 still drew a faint
+                // dark stripe across Milkomeda's core. Zero it completely.
+                controller.volumeMaterial.SetFloat(DustId, Mathf.Lerp(3.4f, 0f, merge));
             }
         }
 
@@ -402,6 +438,9 @@ namespace MilkyWay
                 else if (mr.sharedMaterial == controller.starMaterial)
                     mr.sharedMaterial = m31Stars = new Material(controller.starMaterial);
             }
+            if (m31Volume != null && m31Volume.HasProperty(DustId))
+                m31DustInitial = m31Volume.GetFloat(DustId);
+
             // The clone's star field rebuilt its own mesh in OnEnable; give the
             // freshly built child the instanced material too.
             var sf = andromeda.GetComponentInChildren<GalaxyStarField>();

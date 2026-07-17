@@ -696,7 +696,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.AndromedaCollision
   controller: {fileID: 1395976004}
   orbit: {fileID: 1424659977}
-  duration: 52
+  duration: 36
 --- !u!114 &1424659975
 MonoBehaviour:
   m_ObjectHideFlags: 0
