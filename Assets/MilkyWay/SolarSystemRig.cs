@@ -51,6 +51,15 @@ namespace MilkyWay
             public float spinDegPerSec;
         }
 
+        // Everything SetRealism needs to re-map a planet on the fly.
+        class PlanetRec
+        {
+            public Orbiter orbiter;
+            public float au, radiusEarths;
+            public Transform ring;         // Saturn only
+            public LineRenderer line;
+        }
+
         /// <summary>Overall footprint: Earth's orbit radius in world units.
         /// The default keeps the journey's original framing (Neptune ≈ 0.06 kpc).</summary>
         public float earthOrbit = 0.011f;
@@ -65,7 +74,64 @@ namespace MilkyWay
         readonly List<Material> mats = new();
         readonly List<LineRenderer> orbitLines = new();
         readonly Dictionary<string, Transform> bodies = new();
+        readonly List<PlanetRec> planetRecs = new();
+        readonly List<GameObject> moonPivots = new();
+        Transform sunT;
         Mesh ringMesh, sphereMesh;
+
+        // 1 AU = 23,455 Earth radii; Earth's radius in AU, for the true map.
+        const float EarthRadiusAU = 4.2635e-5f;
+        // 1 AU = 215 solar radii.
+        const float SunRadiusAU = 1f / 215f;
+
+        /// <summary>Blend between the exhibit's legibility mapping (0 —
+        /// orbits ∝ √AU, sizes ∝ √radius, the "map on the teacher's desk")
+        /// and the TRUE proportions (1 — orbits linear in AU, sizes at real
+        /// scale, where every planet vanishes into a grain and even the Sun
+        /// is nearly a point). Moons hide past 0.3: their legibility offsets
+        /// have no honest true-scale counterpart at this footprint.</summary>
+        public void SetRealism(float t)
+        {
+            t = Mathf.Clamp01(t);
+            foreach (var rec in planetRecs)
+            {
+                float displayOrbit = earthOrbit * Mathf.Sqrt(rec.au);
+                float trueOrbit = earthOrbit * rec.au;
+                rec.orbiter.orbitRadius = Mathf.Lerp(displayOrbit, trueOrbit, t);
+
+                float displaySize = earthSize * Mathf.Sqrt(rec.radiusEarths);
+                float trueSize = earthOrbit * EarthRadiusAU * rec.radiusEarths;
+                float s = Mathf.Lerp(displaySize, trueSize, t);
+                rec.orbiter.spinner.localScale = Vector3.one * s;
+                if (rec.ring != null) rec.ring.localScale = Vector3.one * (s / displaySize);
+
+                if (rec.line != null)
+                {
+                    SetLineRadius(rec.line, rec.orbiter.orbitRadius);
+                    // LineRenderer width is WORLD units — it ignores the
+                    // transform scale that the positions ride on (found the
+                    // hard way: at rig scale ×1000 the lines were sub-pixel
+                    // everywhere). Scale it by hand, and widen further toward
+                    // the true map's pull-back framing.
+                    rec.line.widthMultiplier =
+                        Mathf.Lerp(0.00045f, 0.0022f, t) * transform.lossyScale.x;
+                }
+            }
+            if (sunT != null)
+                sunT.localScale = Vector3.one * Mathf.Lerp(0.0035f, earthOrbit * SunRadiusAU, t);
+            foreach (var m in moonPivots)
+                if (m != null && m.activeSelf != (t < 0.3f)) m.SetActive(t < 0.3f);
+        }
+
+        static void SetLineRadius(LineRenderer line, float radius)
+        {
+            int n = line.positionCount;
+            for (int k = 0; k < n; k++)
+            {
+                float a = k / (float)n * Mathf.PI * 2f;
+                line.SetPosition(k, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
+            }
+        }
 
         /// <summary>Orbit guide lines read well from the journey's distance
         /// but become ribbons across a close-up frame — a tour hides them
@@ -229,7 +295,7 @@ namespace MilkyWay
                 var sphere = MakeSphere("Surface", tiltNode, size, mat);
                 mats.Add(mat);
 
-                orbiters.Add(new Orbiter
+                var orbiter = new Orbiter
                 {
                     pivot = pivot,
                     spinner = sphere,
@@ -241,13 +307,20 @@ namespace MilkyWay
                     // Relative day lengths survive; the scale makes Jupiter's
                     // 10-hour spin visible without strobing.
                     spinDegPerSec = 240f / def.dayHours,
-                });
+                };
+                orbiters.Add(orbiter);
                 bodies[def.name] = pivot;
 
-                if (def.name == "Saturn") BuildRings(tiltNode, size, mat);
+                Transform ring = null;
+                if (def.name == "Saturn") ring = BuildRings(tiltNode, size, mat);
                 if (def.moons != null) BuildMoons(def, pivot, size, index);
 
-                BuildOrbitLine(lineShader, orbit);
+                var line = BuildOrbitLine(lineShader, orbit);
+                planetRecs.Add(new PlanetRec
+                {
+                    orbiter = orbiter, au = def.au, radiusEarths = def.radiusEarths,
+                    ring = ring, line = line,
+                });
                 index++;
             }
         }
@@ -386,6 +459,7 @@ namespace MilkyWay
                 mats.Add(m);
             }
             bodies["Sun"] = sun.transform;
+            sunT = sun.transform;
         }
 
         void BuildMoons(BodyDef def, Transform planetPivot, float planetSize, int planetIndex)
@@ -406,6 +480,7 @@ namespace MilkyWay
                 var sphere = MakeSphere("Surface", pivot, planetSize * md.sizeRel, mat);
                 mats.Add(mat);
 
+                moonPivots.Add(pivot.gameObject);
                 orbiters.Add(new Orbiter
                 {
                     pivot = pivot,
@@ -420,7 +495,7 @@ namespace MilkyWay
             }
         }
 
-        void BuildRings(Transform tiltNode, float planetSize, Material planetMat)
+        Transform BuildRings(Transform tiltNode, float planetSize, Material planetMat)
         {
             var go = new GameObject("Rings");
             go.transform.SetParent(tiltNode, false);
@@ -439,6 +514,7 @@ namespace MilkyWay
             mr.sharedMaterial = mat;
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             mats.Add(mat);
+            return go.transform;
         }
 
         static Mesh BuildAnnulus(float rIn, float rOut, int segments)
@@ -468,7 +544,7 @@ namespace MilkyWay
             return mesh;
         }
 
-        void BuildOrbitLine(Shader lineShader, float radius)
+        LineRenderer BuildOrbitLine(Shader lineShader, float radius)
         {
             var line = new GameObject("Orbit").AddComponent<LineRenderer>();
             line.transform.SetParent(transform, false);
@@ -487,12 +563,23 @@ namespace MilkyWay
                 line.SetPosition(k, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
             }
             orbitLines.Add(line);
+            return line;
         }
 
         // ------------------------------------------------------------------
 
+        bool lineWidthSynced;
+
         void Update()
         {
+            // Spawn() applies the exhibit scale AFTER Build(), so world-space
+            // line widths can only be fixed up once we are live.
+            if (!lineWidthSynced)
+            {
+                lineWidthSynced = true;
+                SetRealism(0f);
+            }
+
             float dt = Time.deltaTime * motionScale;
             foreach (var o in orbiters)
             {

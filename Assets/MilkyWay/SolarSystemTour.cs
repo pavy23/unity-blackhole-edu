@@ -21,6 +21,20 @@ namespace MilkyWay
     {
         public CinematicOrbit orbit;
 
+        [Tooltip("Optional: a persistent rig to tour (the solar-system " +
+                 "exhibit's stage). When set, the tour neither spawns nor " +
+                 "destroys a rig, and puts motionScale and orbit lines back " +
+                 "the way it found them.")]
+        public SolarSystemRig stageRig;
+
+        [Tooltip("Alternative to stageRig for scenes whose rig spawns at " +
+                 "runtime (the solar-system exhibit): resolved on StartTour.")]
+        public SolarSystemStage stage;
+
+        [Tooltip("Key shown in the card footer as the exit key — F6 in the " +
+                 "Milky Way scene, F1 in the solar-system exhibit.")]
+        public string toggleKeyLabel = "F6";
+
         [Tooltip("Seconds the camera takes to glide between bodies.")]
         public float glideDuration = 3.2f;
         [Tooltip("Orbit/spin speed while touring. 1 = the zoom journey's pace; " +
@@ -39,9 +53,10 @@ namespace MilkyWay
         SolarSystemRig rig;
         int step;
         float driftDeg;
+        float savedMotionScale;
 
         RectTransform card;
-        Text cardTitle, cardBody, cardFooter;
+        Text cardTitle, cardBody, cardFooter, cardFacts;
 
         Vector3 fromPos, fromLook;
         float glideT;
@@ -56,6 +71,58 @@ namespace MilkyWay
             public float frameMul;         // camera distance in framing radii
             public string title, titleEn, titleJa, titleZh;
         }
+
+        // The detail exhibit's data strips — one line of hard numbers per
+        // body, shown under the stop title. Sources: NASA planetary fact
+        // sheets (moon counts as of 2024).
+        static readonly string[] Facts =
+        {
+            "지름 지구 109배 · 표면 5,500°C · 태양계 질량의 99.8%",
+            "지름 0.38× · 하루 59일 · 1년 88일 · 위성 0 · -173~427°C",
+            "지름 0.95× · 하루 243일(역회전) · 1년 225일 · 위성 0 · 표면 464°C",
+            "지름 12,742km · 하루 24시간 · 1년 365일 · 위성 1 · 평균 15°C",
+            "지름 0.53× · 하루 24.6시간 · 1년 687일 · 위성 2 · 평균 -63°C",
+            "지름 11.2× · 하루 9.9시간 · 1년 11.9년 · 위성 95 · 구름 위 -108°C",
+            "지름 9.4× · 하루 10.7시간 · 1년 29.4년 · 위성 146 · -139°C",
+            "지름 4.0× · 하루 17.2시간(역) · 1년 84년 · 위성 28 · -195°C",
+            "지름 3.9× · 하루 16.1시간 · 1년 165년 · 위성 16 · -201°C",
+        };
+        static readonly string[] FactsEn =
+        {
+            "Diameter 109× Earth · surface 5,500°C · 99.8% of the system's mass",
+            "Diameter 0.38× · day 59 d · year 88 d · moons 0 · -173 to 427°C",
+            "Diameter 0.95× · day 243 d (retrograde) · year 225 d · moons 0 · 464°C",
+            "Diameter 12,742 km · day 24 h · year 365 d · moons 1 · avg 15°C",
+            "Diameter 0.53× · day 24.6 h · year 687 d · moons 2 · avg -63°C",
+            "Diameter 11.2× · day 9.9 h · year 11.9 yr · moons 95 · cloud tops -108°C",
+            "Diameter 9.4× · day 10.7 h · year 29.4 yr · moons 146 · -139°C",
+            "Diameter 4.0× · day 17.2 h (retro) · year 84 yr · moons 28 · -195°C",
+            "Diameter 3.9× · day 16.1 h · year 165 yr · moons 16 · -201°C",
+        };
+        static readonly string[] FactsJa =
+        {
+            "直径 地球の109倍 · 表面 5,500°C · 太陽系質量の99.8%",
+            "直径 0.38× · 1日 59日 · 1年 88日 · 衛星 0 · -173~427°C",
+            "直径 0.95× · 1日 243日(逆回転) · 1年 225日 · 衛星 0 · 表面 464°C",
+            "直径 12,742km · 1日 24時間 · 1年 365日 · 衛星 1 · 平均 15°C",
+            "直径 0.53× · 1日 24.6時間 · 1年 687日 · 衛星 2 · 平均 -63°C",
+            "直径 11.2× · 1日 9.9時間 · 1年 11.9年 · 衛星 95 · 雲頂 -108°C",
+            "直径 9.4× · 1日 10.7時間 · 1年 29.4年 · 衛星 146 · -139°C",
+            "直径 4.0× · 1日 17.2時間(逆) · 1年 84年 · 衛星 28 · -195°C",
+            "直径 3.9× · 1日 16.1時間 · 1年 165年 · 衛星 16 · -201°C",
+        };
+        static readonly string[] FactsZh =
+        {
+            "直径 地球的109倍 · 表面 5,500°C · 占太阳系质量99.8%",
+            "直径 0.38× · 一天 59日 · 一年 88日 · 卫星 0 · -173~427°C",
+            "直径 0.95× · 一天 243日(逆转) · 一年 225日 · 卫星 0 · 表面 464°C",
+            "直径 12,742km · 一天 24小时 · 一年 365日 · 卫星 1 · 平均 15°C",
+            "直径 0.53× · 一天 24.6小时 · 一年 687日 · 卫星 2 · 平均 -63°C",
+            "直径 11.2× · 一天 9.9小时 · 一年 11.9年 · 卫星 95 · 云顶 -108°C",
+            "直径 9.4× · 一天 10.7小时 · 一年 29.4年 · 卫星 146 · -139°C",
+            "直径 4.0× · 一天 17.2小时(逆) · 一年 84年 · 卫星 28 · -195°C",
+            "直径 3.9× · 一天 16.1小时 · 一年 165年 · 卫星 16 · -201°C",
+        };
 
         // The narration clips (Resources/Narration/{,en,ja,zh}/mw_sol_N) are
         // generated from these lines — subtitle == voice, the exhibit-wide
@@ -146,6 +213,7 @@ namespace MilkyWay
         public void StartTour()
         {
             if (Running || !Application.isPlaying) return;
+            if (stageRig == null && stage != null) stageRig = stage.Rig;
             Running = true;
             step = 0;
             driftDeg = 0f;
@@ -159,9 +227,17 @@ namespace MilkyWay
             // is fine but the far plane must still reach the galaxy backdrop.
             if (cam != null) { cam.nearClipPlane = 0.05f; cam.farClipPlane = 20000f; }
 
-            rig = SolarSystemRig.Spawn(RigPosition);
-            rig.gameObject.name = "Solar System (tour)";
-            rig.transform.localScale = Vector3.one * RigScale;
+            if (stageRig != null)
+            {
+                rig = stageRig;
+            }
+            else
+            {
+                rig = SolarSystemRig.Spawn(RigPosition);
+                rig.gameObject.name = "Solar System (tour)";
+                rig.transform.localScale = Vector3.one * RigScale;
+            }
+            savedMotionScale = rig.motionScale;
             rig.motionScale = tourMotionScale;
             // Orbit guide lines read well from a distance but become ribbons
             // across a close-up frame.
@@ -177,7 +253,16 @@ namespace MilkyWay
             Running = false;
             NarrationManager.Instance.Stop();
             if (card != null) card.gameObject.SetActive(false);
-            if (rig != null) Destroy(rig.gameObject);
+            if (rig != null)
+            {
+                if (rig == stageRig)
+                {
+                    // The stage outlives the tour: hand it back as found.
+                    rig.motionScale = savedMotionScale;
+                    rig.SetOrbitLinesVisible(true);
+                }
+                else Destroy(rig.gameObject);
+            }
             rig = null;
 
             var cam = GetComponent<Camera>();
@@ -212,12 +297,13 @@ namespace MilkyWay
             EnsureCard();
             card.gameObject.SetActive(true);
             cardTitle.text = Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
+            cardFacts.text = Loc.T(Facts[step], FactsEn[step], FactsJa[step], FactsZh[step]);
             cardBody.text = Loc.T(NarrationLines[step], NarrationLinesEn[step],
                                   NarrationLinesJa[step], NarrationLinesZh[step]);
-            cardFooter.text = Loc.T("N 다음    B 이전    F6 종료",
-                                    "N Next    B Prev    F6 End",
-                                    "N 次へ    B 前へ    F6 終了",
-                                    "N 下一步    B 上一步    F6 结束")
+            cardFooter.text = Loc.T("N 다음    B 이전    " + toggleKeyLabel + " 종료",
+                                    "N Next    B Prev    " + toggleKeyLabel + " End",
+                                    "N 次へ    B 前へ    " + toggleKeyLabel + " 終了",
+                                    "N 下一步    B 上一步    " + toggleKeyLabel + " 结束")
                             + "                                  " + (step + 1) + " / " + Stops.Length;
         }
 
@@ -275,13 +361,18 @@ namespace MilkyWay
             var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>());
 
             card = BlackHoleUI.MakePanel(canvas.transform, "Sol Tour Card",
-                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(920f, 218f));
+                new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0f, 96f), new Vector2(920f, 244f));
 
             cardTitle = BlackHoleUI.MakeText(card, "Title", 26, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
                 new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -18f), new Vector2(860f, 34f), FontStyle.Bold);
 
+            // The data strip: one line of hard numbers under the title.
+            cardFacts = BlackHoleUI.MakeText(card, "Facts", 15, BlackHoleUI.TitleGold, TextAnchor.UpperLeft,
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -52f), new Vector2(860f, 22f));
+            cardFacts.color = new Color(1f, 0.83f, 0.55f, 0.85f);
+
             cardBody = BlackHoleUI.MakeText(card, "Body", 20, BlackHoleUI.TextPrimary, TextAnchor.UpperLeft,
-                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -58f), new Vector2(860f, 118f));
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(28f, -80f), new Vector2(860f, 118f));
             cardBody.horizontalOverflow = HorizontalWrapMode.Wrap;
 
             cardFooter = BlackHoleUI.MakeText(card, "Footer", 15, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
