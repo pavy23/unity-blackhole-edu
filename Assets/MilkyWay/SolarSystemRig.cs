@@ -182,9 +182,11 @@ namespace MilkyWay
                     m.SetFloat("_NoiseScale", 4f);
                     m.SetColor("_RimColor", new Color(0.9f, 0.8f, 0.5f) * 0.35f);
                     // Super-rotation: the whole cloud deck laps the planet —
-                    // uniform drift, no jets.
+                    // uniform drift, no jets. Calibrated to the spin clock
+                    // (1 h real = 1.5 s exhibit): the real deck laps in four
+                    // days -> one lap every 144 s here.
                     m.SetFloat("_FlowSpeed", 0.05f);
-                    m.SetFloat("_FlowBase", 0.004f);
+                    m.SetFloat("_FlowBase", 0.0069f);
                 } },
             new BodyDef { name = "Earth", au = 1f, radiusEarths = 1f, tiltDeg = 23.4f, dayHours = 23.9f,
                 tex = "2k_earth_daymap", cloudTex = "2k_earth_clouds", nightTex = "2k_earth_nightmap",
@@ -232,11 +234,15 @@ namespace MilkyWay
                     m.SetColor("_SpotColor", new Color(0.72f, 0.30f, 0.18f));
                     // Belts and zones counter-flow; the Great Red Spot churns
                     // in place (vortex centre measured off the actual map).
+                    // All rates ride the SPIN clock (1 h real = 1.5 s here,
+                    // the same 2400x the 14.85 s Jupiter day uses): 150 m/s
+                    // jets shear a relative lap in ~31 min, and the Spot
+                    // turns once per ~162 s (the real 4.5 days).
                     m.SetFloat("_FlowSpeed", 0.09f);
                     m.SetFloat("_FlowJets", 10f);
-                    m.SetFloat("_FlowShear", 0.010f);
-                    m.SetFloat("_FlowBase", 0.002f);
-                    m.SetFloat("_Vortex", 2.4f);
+                    m.SetFloat("_FlowShear", 0.0008f);
+                    m.SetFloat("_FlowBase", 0.0003f);
+                    m.SetFloat("_Vortex", 0.45f);
                     m.SetVector("_VortexUV", new Vector4(0.371f, 0.385f, 0f, 0f));
                     m.SetFloat("_VortexRadius", 0.058f);
                 } },
@@ -250,10 +256,11 @@ namespace MilkyWay
                     m.SetFloat("_BandWarp", 0.25f);
                     m.SetFloat("_Mottle", 0.08f);
                     m.SetFloat("_NoiseScale", 4f);
+                    // ~450 m/s equatorial jet on the spin clock.
                     m.SetFloat("_FlowSpeed", 0.07f);
                     m.SetFloat("_FlowJets", 8f);
-                    m.SetFloat("_FlowShear", 0.007f);
-                    m.SetFloat("_FlowBase", 0.002f);
+                    m.SetFloat("_FlowShear", 0.0029f);
+                    m.SetFloat("_FlowBase", 0.0005f);
                 } },
             new BodyDef { name = "Uranus", au = 19.2f, radiusEarths = 4.0f, tiltDeg = 97.8f, dayHours = -17.2f, tex = "2k_uranus",
                 paint = m => {
@@ -263,11 +270,11 @@ namespace MilkyWay
                     m.SetFloat("_BandWarp", 0.15f);
                     m.SetFloat("_Mottle", 0.05f);
                     m.SetColor("_RimColor", new Color(0.5f, 0.8f, 0.85f) * 0.25f);
-                    // Nearly featureless — the faintest drift is honest.
+                    // Nearly featureless — ~200 m/s winds, the faintest drift.
                     m.SetFloat("_FlowSpeed", 0.04f);
                     m.SetFloat("_FlowJets", 4f);
                     m.SetFloat("_FlowShear", 0.003f);
-                    m.SetFloat("_FlowBase", 0.0015f);
+                    m.SetFloat("_FlowBase", 0.0005f);
                 } },
             new BodyDef { name = "Neptune", au = 30.1f, radiusEarths = 3.9f, tiltDeg = 28.3f, dayHours = 16.1f, tex = "2k_neptune",
                 paint = m => {
@@ -279,11 +286,12 @@ namespace MilkyWay
                     m.SetFloat("_Spot", 0.4f);
                     m.SetColor("_SpotColor", new Color(0.85f, 0.9f, 1f));
                     m.SetColor("_RimColor", new Color(0.3f, 0.45f, 1f) * 0.35f);
-                    // The solar system's fastest winds.
+                    // The solar system's fastest winds: ~500 m/s laps the
+                    // small planet in ~129 s on the spin clock.
                     m.SetFloat("_FlowSpeed", 0.08f);
                     m.SetFloat("_FlowJets", 5f);
-                    m.SetFloat("_FlowShear", 0.009f);
-                    m.SetFloat("_FlowBase", 0.003f);
+                    m.SetFloat("_FlowShear", 0.0078f);
+                    m.SetFloat("_FlowBase", 0.001f);
                 } },
         };
 

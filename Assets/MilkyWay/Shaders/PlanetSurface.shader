@@ -279,8 +279,10 @@ Shader "MilkyWay/PlanetSurface"
                     if (_UseCloudTex > 0.5)
                     {
                         // The observed cloud map, slid in longitude so the
-                        // weather moves relative to the ground.
-                        cl = SampleEquirect(TEXTURE2D_ARGS(_CloudTex, sampler_CloudTex), os, _Time.y * 0.004).r;
+                        // weather moves relative to the ground. 0.0015 lap/s
+                        // on the spin clock (1 h = 1.5 s) is ~25 m/s — real
+                        // weather-system speed, not a global jet stream.
+                        cl = SampleEquirect(TEXTURE2D_ARGS(_CloudTex, sampler_CloudTex), os, _Time.y * 0.0015).r;
                     }
                     else
                     {
