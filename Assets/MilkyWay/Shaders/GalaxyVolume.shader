@@ -216,6 +216,16 @@ Shader "MilkyWay/GalaxyVolume"
                 // a diffuse dust floor through the whole inner disk
                 dust += 0.6 * vertDust * exp(-r / 4.0) * saturate(filaments * 1.3 - 0.15) * edge;
 
+                // -------- the Great Rift: a razor-thin, clumpy dust sheet in
+                // the mid-plane (scale height ~85 pc, like the real one).
+                // From INSIDE it projects as the dark lane splitting the band
+                // lengthwise — the single strongest cue in every photograph —
+                // and from outside it sharpens the disk's edge-on rim.
+                float vertRift = exp(-(p.y * p.y) / (0.085 * 0.085));
+                float riftClump = mw_fbm(p * float3(2.3, 5.5, 2.3) + 19.7);
+                dust += 2.8 * vertRift * exp(-r / 6.5)
+                      * saturate(riftClump * 1.9 - 0.5) * edge;
+
                 // -------- compose --------
                 const float3 OLD_COL   = float3(1.00, 0.86, 0.62);   // K-giant warmth
                 const float3 BULGE_COL = float3(1.00, 0.76, 0.45);
@@ -228,7 +238,12 @@ Shader "MilkyWay/GalaxyVolume"
                 // axisymmetric disk glow is what makes the spiral pop.
                 float armGlow = arms * vertDisk * exp(-r / DISK_SCALE) * 1.3 * clumpy;
 
-                emission = OLD_COL   * (disk * 0.32)
+                // Star clouds: the band in photographs is not a smooth glow
+                // but a chain of bright patches (Scutum, Sagittarius clouds)
+                // between the dust — low-frequency mottling of the old disk.
+                float starClouds = 0.55 + 0.9 * mw_fbm(p * float3(0.45, 1.3, 0.45) + 3.1);
+
+                emission = OLD_COL   * (disk * 0.32 * starClouds)
                          + BULGE_COL * (bulge * _BulgeBoost)
                          + OLD_COL   * armGlow
                          + YOUNG_COL * (young * 2.4 * _YoungStrength)

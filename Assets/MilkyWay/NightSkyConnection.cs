@@ -187,7 +187,12 @@ namespace MilkyWay
             for (float t = 0f; t < liftDuration; t += Time.deltaTime)
             {
                 float u = Mathf.Clamp01(t / liftDuration);
-                float h = Mathf.Exp(Mathf.Lerp(Mathf.Log(h0), Mathf.Log(h1), u));
+                // Fast off the ground: the pure log ramp barely moves for the
+                // first seconds, which read as a dissolve, not a launch. The
+                // pow bends the early curve into a rocket-like kick while the
+                // top end still lands at the same overview height.
+                float uh = Mathf.Pow(u, 0.62f);
+                float h = Mathf.Exp(Mathf.Lerp(Mathf.Log(h0), Mathf.Log(h1), uh));
                 // Rise along the STAGE's up (world-up drifts in as height
                 // makes the tilt meaningless), drifting outward so the whole
                 // disk fits.
@@ -199,18 +204,23 @@ namespace MilkyWay
                 transform.LookAt(Vector3.Lerp(sun + toCentre * 8f, Vector3.zero,
                     Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.6f, u))), riseUp);
                 // The ground-stage grade eases back out with height.
-                float dustEase = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.15f, 0.55f, u));
+                float dustEase = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.3f, 0.7f, u));
                 controller.dustStrength = Mathf.Lerp(savedDust * 1.5f, savedDust, dustEase);
                 controller.clumpiness = Mathf.Lerp(Mathf.Min(1.5f, savedClump * 1.35f), savedClump, dustEase);
                 controller.hiiStrength = Mathf.Lerp(savedHii * 0.3f, savedHii, dustEase);
                 controller.youngStrength = Mathf.Lerp(savedYoung * 0.6f, savedYoung, dustEase);
 
-                // The night stage fades away in the first quarter of the climb.
+                // The stage is LEFT BEHIND rather than dissolved: the camera
+                // climbs past the ridge (it drops out of the bottom of frame),
+                // and only then do the leftovers fade — ground first, the
+                // photo sky a beat later, once the volumetric band has taken
+                // over the same part of the sky.
                 if (stage != null)
                 {
-                    float a = 1f - Mathf.InverseLerp(0.02f, 0.18f, u);
-                    FadeStage(a);
-                    if (a <= 0f) DestroyGround();
+                    float aGround = 1f - Mathf.InverseLerp(0.22f, 0.42f, u);
+                    float aDome = 1f - Mathf.InverseLerp(0.30f, 0.56f, u);
+                    FadeStage(aGround, aDome);
+                    if (aDome <= 0f) DestroyGround();
                 }
 
                 // Exposure brightens as we leave the disk.
@@ -387,11 +397,12 @@ namespace MilkyWay
             mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
         }
 
-        void FadeStage(float a)
+        void FadeStage(float aGround, float aDome)
         {
+            float a = aGround;
             foreach (var m in propMats)
                 if (m != null) { var c = m.color; c.a = a; m.color = c; }
-            if (domeMat != null) { var c = domeMat.color; c.a = Mathf.Clamp01(a * 1.25f); domeMat.color = c; }
+            if (domeMat != null) { var c = domeMat.color; c.a = Mathf.Clamp01(aDome); domeMat.color = c; }
             if (groundMat != null) { var c = groundMat.color; c.a = a; groundMat.color = c; }
             if (ridgeMat != null) { var c = ridgeMat.color; c.a = a; ridgeMat.color = c; }
             if (glowMat != null) { var c = glowMat.color; c.a = a; glowMat.color = c; }

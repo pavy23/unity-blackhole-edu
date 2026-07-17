@@ -37,7 +37,7 @@ namespace MilkyWay
         Material mat;
         bool built;
 
-        struct G { public Vector3 p; public float size; public Color tint; public float minPx; }
+        struct G { public Vector3 p; public float size; public Color tint; public float minPx; public float boost; }
 
         static readonly Color SpiralTint = new Color(0.70f, 0.76f, 1.00f);
         static readonly Color EllipTint = new Color(1.00f, 0.82f, 0.62f);
@@ -79,10 +79,10 @@ namespace MilkyWay
         {
             // The two big spirals' companions and the dwarf swarm. M31 is
             // authored slightly larger than the Milky Way — as observed.
-            list.Add(new G { p = M31Pos, size = 46f, tint = SpiralTint * 1.15f, minPx = 8f });
-            list.Add(new G { p = M31Pos + new Vector3(120f, -60f, 140f), size = 18f, tint = SpiralTint, minPx = 6f }); // M33
-            list.Add(new G { p = new Vector3(28f, -22f, 34f), size = 9f, tint = IrregTint, minPx = 5f });   // LMC
-            list.Add(new G { p = new Vector3(38f, -30f, 22f), size = 6f, tint = IrregTint, minPx = 5f });   // SMC
+            list.Add(new G { p = M31Pos, size = 46f, tint = SpiralTint * 1.15f, minPx = 9f, boost = 5f });
+            list.Add(new G { p = M31Pos + new Vector3(120f, -60f, 140f), size = 18f, tint = SpiralTint, minPx = 6f, boost = 3f }); // M33
+            list.Add(new G { p = new Vector3(28f, -22f, 34f), size = 9f, tint = IrregTint, minPx = 5f, boost = 2f });   // LMC
+            list.Add(new G { p = new Vector3(38f, -30f, 22f), size = 6f, tint = IrregTint, minPx = 5f, boost = 2f });   // SMC
             for (int i = 0; i < 34; i++)
             {
                 // Dwarf spheroidals: faint, tiny, everywhere.
@@ -100,8 +100,11 @@ namespace MilkyWay
             // halo, a handful of giant ellipticals tens of pixels across,
             // a crowd of mid-size fuzz, and a dusting of faint members. The
             // per-galaxy pixel floor is what carries the hierarchy to screen.
-            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.5f, minPx = 26f });
-            int giants = Mathf.Max(6, members / 160);
+            // Photographic exposure: real cluster frames STRETCH the halos —
+            // the boost channel lifts the big members the way a long exposure
+            // does, instead of letting energy conservation bury them.
+            list.Add(new G { p = centre, size = bcgSize, tint = EllipTint * 1.5f, minPx = 46f, boost = 14f });
+            int giants = Mathf.Max(8, members / 130);
             for (int i = 0; i < giants; i++)
             {
                 Vector3 p = centre + Gaussian3(rng) * sigma * 0.45f; // giants sink to the core
@@ -110,7 +113,8 @@ namespace MilkyWay
                     p = p,
                     size = 45f + 40f * (float)rng.NextDouble(),
                     tint = EllipTint * (1.1f + 0.4f * (float)rng.NextDouble()),
-                    minPx = 13f + 9f * (float)rng.NextDouble(),
+                    minPx = 22f + 16f * (float)rng.NextDouble(),
+                    boost = 8f + 5f * (float)rng.NextDouble(),
                 });
             }
             for (int i = 0; i < members; i++)
@@ -122,7 +126,8 @@ namespace MilkyWay
                     p = p,
                     size = 9f + 42f * Mathf.Pow((float)rng.NextDouble(), 1.8f),
                     tint = (ellip ? EllipTint : SpiralTint) * (0.65f + 0.6f * (float)rng.NextDouble()),
-                    minPx = 4f + 16f * Mathf.Pow((float)rng.NextDouble(), 2.5f),
+                    minPx = 5f + 18f * Mathf.Pow((float)rng.NextDouble(), 2.2f),
+                    boost = 3f + 3f * (float)rng.NextDouble(),
                 });
             }
         }
@@ -189,7 +194,7 @@ namespace MilkyWay
                     cols[v] = g.tint;
                     corners[v] = new Vector2((k & 1) * 2 - 1, (k >> 1) * 2 - 1);
                     sizeRand[v] = new Vector2(g.size, rand);
-                    pixelFloor[v] = new Vector2(Mathf.Max(g.minPx, 1.5f), 0f);
+                    pixelFloor[v] = new Vector2(Mathf.Max(g.minPx, 1.5f), Mathf.Max(g.boost, 1f));
                 }
                 int t = i * 6, b = i * 4;
                 tris[t] = b; tris[t + 1] = b + 2; tris[t + 2] = b + 1;

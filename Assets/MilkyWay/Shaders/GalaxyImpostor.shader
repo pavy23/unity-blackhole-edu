@@ -44,6 +44,9 @@ Shader "MilkyWay/GalaxyImpostor"
                 float2 pixelFloor : TEXCOORD2;  // x = per-galaxy minimum pixels: cluster
                                                 // members stay RESOLVED fuzzy galaxies
                                                 // (the JWST read) while the web stays points
+                                                // y = exposure boost: photographs stretch
+                                                // cluster halos; energy conservation would
+                                                // bury the enlarged sprites without it
             };
 
             struct Varyings
@@ -82,8 +85,10 @@ Shader "MilkyWay/GalaxyImpostor"
 
                 // Tint in rgb, energy in a — the core term needs the energy
                 // factor too, or sub-pixel spirals keep full-brightness cores
-                // and the sky washes grey again.
-                o.color = float4(v.color.rgb, energy);
+                // and the sky washes grey again. The per-galaxy exposure boost
+                // rides in with the energy so showpieces read like long-
+                // exposure photographs instead of vanishing conservatively.
+                o.color = float4(v.color.rgb, energy * max(v.pixelFloor.y, 1.0));
                 o.uvRand = float3(v.corner, v.sizeRand.y);
                 return o;
             }
@@ -119,10 +124,13 @@ Shader "MilkyWay/GalaxyImpostor"
                 else if (r3 < 0.87)
                 {
                     // Elliptical: smooth, rounder, redder (the tint handles
-                    // the colour; the profile is just a soft ball of old light).
+                    // the colour). De Vaucouleurs-ish: a compact bright core
+                    // inside a WIDE soft halo — the halo is what makes a big
+                    // cluster elliptical read as a photograph.
                     uv.y /= (0.55 + 0.45 * r1);
                     float r = length(uv);
-                    col = i.color.rgb * exp(-pow(r, 1.3) * 3.6) * 1.25;
+                    col = i.color.rgb * (exp(-pow(r, 1.1) * 2.6) * 0.85
+                                       + exp(-r * r * 22.0) * 0.9);
                 }
                 else
                 {
