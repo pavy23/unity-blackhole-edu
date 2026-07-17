@@ -58,6 +58,7 @@ namespace MilkyWay
             public float au, radiusEarths;
             public Transform ring;         // Saturn only
             public LineRenderer line;
+            public Material lineMat;       // per-orbit: carries the head phase
         }
 
         /// <summary>Overall footprint: Earth's orbit radius in world units.
@@ -306,7 +307,7 @@ namespace MilkyWay
             sphereMesh = BuildSphere(96, 48);
 
             BuildSun();
-            var lineShader = Shader.Find("Sprites/Default");
+            var lineShader = Shader.Find("MilkyWay/OrbitLine");
             int index = 0;
             foreach (var def in Defs)
             {
@@ -350,11 +351,16 @@ namespace MilkyWay
                 if (def.name == "Saturn") ring = BuildRings(tiltNode, size, mat);
                 if (def.moons != null) BuildMoons(def, pivot, size, index);
 
-                var line = BuildOrbitLine(lineShader, orbit);
+                // The orbit wears a whisper of its planet's colour, so the
+                // family of ellipses reads as belonging to the family of
+                // worlds rather than as one grid.
+                Color planetTint = mat.HasProperty("_BaseColor")
+                    ? mat.GetColor("_BaseColor") : new Color(0.65f, 0.75f, 0.95f);
+                var line = BuildOrbitLine(lineShader, orbit, planetTint);
                 planetRecs.Add(new PlanetRec
                 {
                     orbiter = orbiter, au = def.au, radiusEarths = def.radiusEarths,
-                    ring = ring, line = line,
+                    ring = ring, line = line, lineMat = line.material,
                 });
                 index++;
             }
@@ -579,7 +585,7 @@ namespace MilkyWay
             return mesh;
         }
 
-        LineRenderer BuildOrbitLine(Shader lineShader, float radius)
+        LineRenderer BuildOrbitLine(Shader lineShader, float radius, Color planetTint)
         {
             var line = new GameObject("Orbit").AddComponent<LineRenderer>();
             line.transform.SetParent(transform, false);
@@ -591,9 +597,18 @@ namespace MilkyWay
             line.loop = true;
             line.useWorldSpace = false;
             line.widthMultiplier = 0.00045f;
-            line.material = new Material(lineShader);
-            mats.Add(line.material);
-            line.startColor = line.endColor = new Color(0.6f, 0.7f, 0.9f, 0.22f);
+            // Stretch mode gives the shader uv.x = 0..1 around the loop — the
+            // same parameter as the orbit angle, which is what lets the
+            // comet-tail gradient track the planet.
+            line.textureMode = LineTextureMode.Stretch;
+            var m = new Material(lineShader);
+            m.SetColor("_Color", new Color(
+                Mathf.Lerp(0.65f, planetTint.r, 0.45f),
+                Mathf.Lerp(0.75f, planetTint.g, 0.45f),
+                Mathf.Lerp(0.95f, planetTint.b, 0.45f), 0.62f));
+            line.material = m;
+            mats.Add(m);
+            line.startColor = line.endColor = Color.white; // the shader owns colour
             line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
             for (int k = 0; k < N; k++)
             {
@@ -625,6 +640,11 @@ namespace MilkyWay
                 o.pivot.localPosition = new Vector3(Mathf.Cos(o.angle), 0f, Mathf.Sin(o.angle)) * o.orbitRadius;
                 o.spinner.Rotate(0f, o.spinDegPerSec * dt, 0f, Space.Self);
             }
+            // The comet-tail gradient follows each planet around its ellipse.
+            foreach (var rec in planetRecs)
+                if (rec.lineMat != null)
+                    rec.lineMat.SetFloat("_HeadPhase",
+                        Mathf.Repeat(rec.orbiter.angle / (2f * Mathf.PI), 1f));
         }
 
         // Materials and the generated meshes are created per spawn; destroying
