@@ -136,6 +136,12 @@ namespace MilkyWay.Editor
             zoo.controller = controller;
             zoo.orbit = orbit;
 
+            // Sagittarius A* crossover (F9): dive to the core, land in the
+            // black-hole exhibit.
+            var sgr = camGO.AddComponent<SgrACrossover>();
+            sgr.controller = controller;
+            sgr.orbit = orbit;
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -147,6 +153,7 @@ namespace MilkyWay.Editor
             controls.solarTour = solTour;
             controls.rotationLab = rotLab;
             controls.zoo = zoo;
+            controls.sgrA = sgr;
 
             SetupPostProcessing();
 

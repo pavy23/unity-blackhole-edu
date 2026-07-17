@@ -477,6 +477,8 @@ namespace BlackHoleEffect
             if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
             if (kb.pKey.wasPressedThisFrame && hud != null) hud.show = !hud.show;
             if (kb.f12Key.wasPressedThisFrame) Snapshot();
+            if (kb.f9Key.wasPressedThisFrame && !CinematicBusy)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
             if (kb.uKey.wasPressedThisFrame) SetImmersive(!immersive);
             if (kb.rKey.wasPressedThisFrame) ResetCamera();
@@ -529,6 +531,8 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
             if (Input.GetKeyDown(KeyCode.P) && hud != null) hud.show = !hud.show;
             if (Input.GetKeyDown(KeyCode.F12)) Snapshot();
+            if (Input.GetKeyDown(KeyCode.F9) && !CinematicBusy)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
             if (Input.GetKeyDown(KeyCode.U)) SetImmersive(!immersive);
             if (Input.GetKeyDown(KeyCode.R)) ResetCamera();
@@ -622,7 +626,7 @@ namespace BlackHoleEffect
             // Four category rows: controls / experiences / black-hole setup /
             // phenomenon toggles — matching how the features are actually used.
             help.text = Loc.T(
-                Cat("체험") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합\n"
+                Cat("체험") + Key("F1") + "가이드 투어(N/B)  " + Key("F2") + "블랙홀 탄생  " + Key("F3") + "낙하 체험  " + Key("F4") + "블랙홀 병합  " + Key("F9") + "우리은하 전시로\n"
                 + Cat("블랙홀") + Key("1") + "원반 색상  " + Key("2") + "질량  " + Key("3") + "스핀  " + Key("4") + "관측사진\n"
                 + Cat("현상") + Key("Space") + "광자 발사/지우기  " + Key("E") + "아인슈타인 링(A/D)  " + Key("T") + "스파게티화  "
                     + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선\n"
@@ -630,7 +634,7 @@ namespace BlackHoleEffect
                     + Key("X") + "수식  " + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("P") + "성능  "
                     + Key("F12") + "스냅샷  " + Key("H") + "도움말  " + Key("C") + "설명 난이도",
 
-                Cat("Experiences") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger\n"
+                Cat("Experiences") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger  " + Key("F9") + "to the Milky Way\n"
                 + Cat("Black hole") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "EHT photo\n"
                 + Cat("Phenomena") + Key("Space") + "photons fire/clear  " + Key("E") + "Einstein ring(A/D)  " + Key("T") + "spaghettify  "
                     + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve\n"
@@ -638,7 +642,7 @@ namespace BlackHoleEffect
                     + Key("X") + "math  " + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("P") + "perf  "
                     + Key("F12") + "snapshot  " + Key("H") + "help  " + Key("C") + "level",
 
-                Cat("体験") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体\n"
+                Cat("体験") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体  " + Key("F9") + "天の川展示へ\n"
                 + Cat("ブラックホール") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "観測写真\n"
                 + Cat("現象") + Key("Space") + "光子 発射/消去  " + Key("E") + "アインシュタインリング(A/D)  " + Key("T") + "スパゲッティ化  "
                     + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線\n"
@@ -646,7 +650,7 @@ namespace BlackHoleEffect
                     + Key("X") + "数式  " + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("P") + "性能  "
                     + Key("F12") + "撮影  " + Key("H") + "ヘルプ  " + Key("C") + "難易度",
 
-                Cat("体验") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合\n"
+                Cat("体验") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合  " + Key("F9") + "去银河系展区\n"
                 + Cat("黑洞") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "观测照片\n"
                 + Cat("现象") + Key("Space") + "光子 发射/清除  " + Key("E") + "爱因斯坦环(A/D)  " + Key("T") + "面条化  "
                     + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线\n"
