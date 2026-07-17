@@ -142,6 +142,9 @@ namespace MilkyWay.Editor
             sgr.controller = controller;
             sgr.orbit = orbit;
 
+            // Galactic soundscape: procedural, ethereal (M toggles mute).
+            var audio = camGO.AddComponent<MilkyWayAudio>();
+
             var controls = camGO.AddComponent<MilkyWayControls>();
             controls.controller = controller;
             controls.orbit = orbit;
@@ -154,6 +157,7 @@ namespace MilkyWay.Editor
             controls.rotationLab = rotLab;
             controls.zoo = zoo;
             controls.sgrA = sgr;
+            controls.audioScape = audio;
 
             SetupPostProcessing();
 
