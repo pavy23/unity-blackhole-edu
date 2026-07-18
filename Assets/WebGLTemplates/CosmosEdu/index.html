@@ -92,6 +92,20 @@
       // without the visitor having to enter fullscreen first.
       function focusCanvas() { try { canvas.focus(); } catch (e) {} }
 
+      // Cursor fix: right-drag orbits the camera, but in a windowed page the
+      // browser reads that drag as a native drag-and-drop / text-selection and
+      // shows a red "not-allowed" cursor that can stick. Suppress the browser's
+      // drag, selection and context menu over the canvas, and pin its cursor.
+      canvas.style.cursor = "default";
+      canvas.style.userSelect = "none";
+      canvas.style.webkitUserSelect = "none";
+      canvas.style.touchAction = "none";
+      canvas.setAttribute("draggable", "false");
+      canvas.addEventListener("dragstart", (e) => e.preventDefault());
+      canvas.addEventListener("selectstart", (e) => e.preventDefault());
+      // Right-click is a camera control here, not a menu trigger.
+      canvas.addEventListener("contextmenu", (e) => e.preventDefault());
+
       var script = document.createElement("script");
       script.src = loaderUrl;
       script.onload = () => {
