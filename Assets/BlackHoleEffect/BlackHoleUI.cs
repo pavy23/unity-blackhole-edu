@@ -99,6 +99,11 @@ namespace BlackHoleEffect
         {
             get
             {
+                // Bundled Noto Sans KR first: WebGL has NO OS font fallback,
+                // so every Korean/Japanese/Chinese glyph the exhibit draws
+                // must come from a font we ship (OFL, see Fonts/LICENSE-OFL).
+                if (font == null)
+                    font = Resources.Load<Font>("Fonts/NotoSansKR-Regular");
                 // LegacyRuntime is a dynamic font with OS fallback (Korean
                 // renders fine). CreateDynamicFontFromOSFont does not
                 // rasterize reliably in edit mode, so we avoid it.

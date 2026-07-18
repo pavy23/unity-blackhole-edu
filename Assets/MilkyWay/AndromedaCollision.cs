@@ -41,6 +41,7 @@ namespace MilkyWay
         GameObject andromeda;
         Material m31Volume, m31Stars;
         float m31DustInitial = 3.4f;
+        float tideSmooth;
         Transform mw;
 
         Text caption, yearline;
@@ -190,6 +191,7 @@ namespace MilkyWay
             mw = controller.transform;
             savedMWPos = mw.position;
             savedMWRot = mw.rotation;
+            tideSmooth = 0f;
             if (orbit != null) orbit.enabled = false;
             ShowStop(true);
             // Beats 1-3 fire mid-encounter; loading their mp3s at that moment
@@ -377,8 +379,15 @@ namespace MilkyWay
 
         void Tides(float u, float sep)
         {
-            // Tidal stretch grows as separation shrinks, saturating near contact.
-            float tide = Mathf.Clamp01(30f / (sep + 8f)) * 0.85f;
+            // Tidal stretch grows as separation shrinks, saturating near
+            // contact — and LINGERS: real tails keep streaming long after
+            // pericenter, so the stretch decays slowly instead of snapping
+            // back the moment the galaxies separate. This is the beat the
+            // narration promises ("tides draw their stars into long tails");
+            // it has to be unmissable, not a subtle warp.
+            float tideNow = Mathf.Clamp01(34f / (sep + 6f)) * 1.3f;
+            tideSmooth = Mathf.Max(tideNow, tideSmooth - Time.deltaTime * 0.06f);
+            float tide = tideSmooth;
             // Coalescence: arms off, stars phase-mix, bulge swells — elliptical.
             float merge = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.82f, 0.97f, u));
             tide *= 1f - merge; // the merged body relaxes

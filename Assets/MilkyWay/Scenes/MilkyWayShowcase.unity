@@ -600,7 +600,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MilkyWay.SgrACrossover
   controller: {fileID: 1395976004}
   orbit: {fileID: 1424659977}
-  diveDuration: 30
+  diveDuration: 20
 --- !u!114 &1424659969
 MonoBehaviour:
   m_ObjectHideFlags: 0

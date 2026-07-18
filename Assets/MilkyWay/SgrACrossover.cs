@@ -26,7 +26,7 @@ namespace MilkyWay
         public CinematicOrbit orbit;
 
         [Tooltip("Seconds for the dive from overview to the bulge core.")]
-        public float diveDuration = 30f;
+        public float diveDuration = 20f;
 
         public bool IsPlaying { get; private set; }
 
@@ -54,32 +54,34 @@ namespace MilkyWay
         Material sstarMat;
         Texture2D sstarTex;
 
+        // Tightened 2026-07: the crossover's length was narration-bound (the
+        // dive itself is 20 s) — same teaching beats, half the words.
         public static readonly string[] NarrationLines =
         {
-            "이제 은하의 심장으로 들어갑니다. 나선팔을 지나고 막대를 지나면 별들이 점점 붐빕니다 — 은하 중심 근처는 태양 주변보다 별이 수백만 배나 빽빽한 곳입니다.",
-            "수십 년 동안 천문학자들은 중심의 별들이 보이지 않는 무언가를 무서운 속도로 도는 것을 지켜봤습니다 — 초속 수천 킬로미터. 그 궤도들이 가리키는 한 점에, 태양 4백만 배의 질량이 숨어 있습니다.",
-            "가시광으로는 여기까지입니다 — 먼지가 중심을 가리고 있으니까요. 전파 망원경들이 마침내 그 그림자를 찍어냈습니다. 궁수자리 A 스타 — 우리 은하의 블랙홀입니다. 이제, 그곳으로 갑니다.",
+            "이제 은하의 심장으로 들어갑니다. 중심에 가까울수록, 별들은 태양 주변보다 수백만 배나 빽빽합니다.",
+            "천문학자들은 이 별들이 보이지 않는 한 점을 초속 수천 킬로미터로 도는 것을 지켜봤습니다. 그 점에, 태양 4백만 배의 질량이 숨어 있습니다.",
+            "가시광은 먼지에 막혀 여기까지 — 전파 망원경들이 마침내 그 그림자를 찍었습니다. 궁수자리 A 스타. 이제, 그곳으로 갑니다.",
         };
 
         public static readonly string[] NarrationLinesEn =
         {
-            "Now we dive into the heart of the galaxy. Past the arms, past the bar, the stars crowd tighter and tighter — near the centre they are packed millions of times denser than around the Sun.",
-            "For decades astronomers watched the innermost stars whip around something unseen at thousands of kilometres per second. At the one point every orbit agrees on, four million solar masses lie hidden.",
-            "Visible light ends here — dust curtains the centre. Radio telescopes finally photographed the shadow itself: Sagittarius A star, our galaxy's black hole. Now — let's go there.",
+            "Now we dive into the heart of the galaxy — near the centre, stars crowd millions of times denser than around the Sun.",
+            "Astronomers watched these stars whip around one unseen point at thousands of kilometres per second. Four million solar masses hide there.",
+            "Dust stops visible light here — but radio telescopes finally photographed the shadow itself. Sagittarius A star. Now, let's go there.",
         };
 
         public static readonly string[] NarrationLinesJa =
         {
-            "いよいよ銀河の心臓部へ入ります。腕を過ぎ、棒を過ぎると、星はどんどん密になります — 銀河中心の近くでは、太陽のまわりの数百万倍も星が詰まっています。",
-            "何十年ものあいだ、天文学者たちは中心の星々が見えない何かのまわりを恐ろしい速さで回るのを見つめてきました — 秒速数千キロ。すべての軌道が指し示すその一点に、太陽の400万倍の質量が隠れています。",
-            "可視光で見えるのはここまでです — 塵が中心を覆い隠しているからです。電波望遠鏡がついにその影を撮影しました。いて座Aスター — 私たちの銀河のブラックホールです。さあ、そこへ行きましょう。",
+            "いよいよ銀河の心臓部へ。中心に近づくほど、星は太陽のまわりの数百万倍も密集しています。",
+            "天文学者たちは、星々が見えない一点を秒速数千キロで回るのを見つめてきました。そこに、太陽の400万倍の質量が隠れています。",
+            "可視光はここまで — 電波望遠鏡がついにその影を撮影しました。いて座Aスター。さあ、そこへ行きましょう。",
         };
 
         public static readonly string[] NarrationLinesZh =
         {
-            "现在，我们潜入银河的心脏。越过旋臂，越过棒，恒星越来越拥挤——银心附近的恒星密度是太阳周围的数百万倍。",
-            "几十年来，天文学家看着最内侧的恒星以每秒数千公里的速度绕着某个看不见的东西疾驰。在所有轨道共同指向的那一点上，藏着四百万倍太阳的质量。",
-            "可见光到此为止——尘埃遮住了中心。射电望远镜终于拍下了那道阴影本身：人马座A星——我们银河系的黑洞。现在，我们就去那里。",
+            "现在，我们潜入银河的心脏——越靠近中心，恒星密度是太阳周围的数百万倍。",
+            "天文学家看着这些恒星以每秒数千公里绕着一个看不见的点疾驰。那里，藏着四百万倍太阳的质量。",
+            "可见光止步于此——射电望远镜终于拍下了那道阴影。人马座A星。现在，我们就去那里。",
         };
 
         public void Begin()
@@ -225,7 +227,7 @@ namespace MilkyWay
             Caption(Loc.T(NarrationLines[0], NarrationLinesEn[0], NarrationLinesJa[0], NarrationLinesZh[0]));
             Vector3 fromPos = transform.position;
             Quaternion fromRot = transform.rotation;
-            for (float t = 0f, dur = 2.6f; t < dur; t += Time.deltaTime)
+            for (float t = 0f, dur = 2.0f; t < dur; t += Time.deltaTime)
             {
                 float u = Mathf.SmoothStep(0f, 1f, t / dur);
                 transform.position = Vector3.Lerp(fromPos, dir * DStart, u);
@@ -284,9 +286,9 @@ namespace MilkyWay
             // Fade to black, put every shared asset back, and cross over.
             EnsureFade();
             fade.gameObject.SetActive(true);
-            for (float t = 0f; t < 1.8f; t += Time.deltaTime)
+            for (float t = 0f; t < 1.4f; t += Time.deltaTime)
             {
-                fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 1.8f));
+                fade.color = new Color(0f, 0f, 0f, Mathf.Clamp01(t / 1.4f));
                 UpdateSwarm(Time.deltaTime);
                 yield return null;
             }
