@@ -479,6 +479,8 @@ namespace BlackHoleEffect
             if (kb.f12Key.wasPressedThisFrame) Snapshot();
             if (kb.f9Key.wasPressedThisFrame && !CinematicBusy)
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
+            if (kb.f10Key.wasPressedThisFrame && !CinematicBusy)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
             if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
             if (kb.uKey.wasPressedThisFrame) SetImmersive(!immersive);
             if (kb.rKey.wasPressedThisFrame) ResetCamera();
@@ -533,6 +535,8 @@ namespace BlackHoleEffect
             if (Input.GetKeyDown(KeyCode.F12)) Snapshot();
             if (Input.GetKeyDown(KeyCode.F9) && !CinematicBusy)
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
+            if (Input.GetKeyDown(KeyCode.F10) && !CinematicBusy)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
             if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
             if (Input.GetKeyDown(KeyCode.U)) SetImmersive(!immersive);
             if (Input.GetKeyDown(KeyCode.R)) ResetCamera();
@@ -632,7 +636,7 @@ namespace BlackHoleEffect
                     + Key("J") + "제트  " + Key("G") + "렌즈  " + Key("V") + "광도곡선\n"
                 + Cat("조작") + Key("우클릭") + "회전  " + Key("휠·W/S") + "줌  " + Key("R") + "리셋  " + Key("L") + "라벨  " + Key("I") + "패널  "
                     + Key("X") + "수식  " + Key("U") + "몰입  " + Key("M") + "소리  " + Key("K") + "언어  " + Key("P") + "성능  "
-                    + Key("F12") + "스냅샷  " + Key("H") + "도움말  " + Key("C") + "설명 난이도",
+                    + Key("F10") + "처음으로  " + Key("F12") + "스냅샷  " + Key("H") + "도움말  " + Key("C") + "설명 난이도",
 
                 Cat("Experiences") + Key("F1") + "guided tour(N/B)  " + Key("F2") + "birth of a hole  " + Key("F3") + "fall in  " + Key("F4") + "merger  " + Key("F9") + "to the Milky Way\n"
                 + Cat("Black hole") + Key("1") + "disk colors  " + Key("2") + "mass  " + Key("3") + "spin  " + Key("4") + "EHT photo\n"
@@ -640,7 +644,7 @@ namespace BlackHoleEffect
                     + Key("J") + "jets  " + Key("G") + "lens  " + Key("V") + "light curve\n"
                 + Cat("Controls") + Key("RMB") + "orbit  " + Key("Wheel·W/S") + "zoom  " + Key("R") + "reset  " + Key("L") + "labels  " + Key("I") + "panel  "
                     + Key("X") + "math  " + Key("U") + "immersive  " + Key("M") + "sound  " + Key("K") + "language  " + Key("P") + "perf  "
-                    + Key("F12") + "snapshot  " + Key("H") + "help  " + Key("C") + "level",
+                    + Key("F10") + "title  " + Key("F12") + "snapshot  " + Key("H") + "help  " + Key("C") + "level",
 
                 Cat("体験") + Key("F1") + "ガイドツアー(N/B)  " + Key("F2") + "誕生  " + Key("F3") + "落下体験  " + Key("F4") + "合体  " + Key("F9") + "天の川展示へ\n"
                 + Cat("ブラックホール") + Key("1") + "円盤の色  " + Key("2") + "質量  " + Key("3") + "スピン  " + Key("4") + "観測写真\n"
@@ -648,7 +652,7 @@ namespace BlackHoleEffect
                     + Key("J") + "ジェット  " + Key("G") + "レンズ  " + Key("V") + "光度曲線\n"
                 + Cat("操作") + Key("右ドラッグ") + "回転  " + Key("ホイール·W/S") + "ズーム  " + Key("R") + "リセット  " + Key("L") + "ラベル  " + Key("I") + "パネル  "
                     + Key("X") + "数式  " + Key("U") + "没入  " + Key("M") + "音  " + Key("K") + "言語  " + Key("P") + "性能  "
-                    + Key("F12") + "撮影  " + Key("H") + "ヘルプ  " + Key("C") + "難易度",
+                    + Key("F10") + "最初へ  " + Key("F12") + "撮影  " + Key("H") + "ヘルプ  " + Key("C") + "難易度",
 
                 Cat("体验") + Key("F1") + "导览(N/B)  " + Key("F2") + "黑洞诞生  " + Key("F3") + "坠落体验  " + Key("F4") + "黑洞并合  " + Key("F9") + "去银河系展区\n"
                 + Cat("黑洞") + Key("1") + "盘颜色  " + Key("2") + "质量  " + Key("3") + "自旋  " + Key("4") + "观测照片\n"
@@ -656,7 +660,7 @@ namespace BlackHoleEffect
                     + Key("J") + "喷流  " + Key("G") + "透镜  " + Key("V") + "光变曲线\n"
                 + Cat("操作") + Key("右键") + "旋转  " + Key("滚轮·W/S") + "缩放  " + Key("R") + "重置  " + Key("L") + "标签  " + Key("I") + "面板  "
                     + Key("X") + "公式  " + Key("U") + "沉浸  " + Key("M") + "声音  " + Key("K") + "语言  " + Key("P") + "性能  "
-                    + Key("F12") + "截图  " + Key("H") + "帮助  " + Key("C") + "难度");
+                    + Key("F10") + "回标题  " + Key("F12") + "截图  " + Key("H") + "帮助  " + Key("C") + "难度");
 
             // Size the bar to the language: preferredHeight accounts for the
             // wrapped line count at the current rect width.

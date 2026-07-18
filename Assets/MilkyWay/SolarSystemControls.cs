@@ -225,6 +225,8 @@ namespace MilkyWay
             }
             if (kb.f9Key.wasPressedThisFrame && !AnyPlaying)
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
+            if (kb.f10Key.wasPressedThisFrame && !AnyPlaying)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
             if (tour != null && tour.Running)
             {
                 if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
@@ -250,6 +252,8 @@ namespace MilkyWay
             }
             if (Input.GetKeyDown(KeyCode.F9) && !AnyPlaying)
                 UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
+            if (Input.GetKeyDown(KeyCode.F10) && !AnyPlaying)
+                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
             if (tour != null && tour.Running)
             {
                 if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
@@ -336,10 +340,10 @@ namespace MilkyWay
         {
             if (help == null) return;
             help.text = Loc.T(
-                Key("클릭") + "행성 줌인   " + Key("F1") + "행성 투어(N/B)   " + Key("F2") + "진짜 크기   " + Key("F9") + "우리은하 전시로   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("M") + "소리   " + Key("K") + "언어   " + Key("H") + "도움말",
-                Key("Click") + "zoom to planet   " + Key("F1") + "planet tour(N/B)   " + Key("F2") + "the true scale   " + Key("F9") + "to the Milky Way   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("M") + "sound   " + Key("K") + "language   " + Key("H") + "help",
-                Key("クリック") + "惑星ズーム   " + Key("F1") + "惑星ツアー(N/B)   " + Key("F2") + "本当の縮尺   " + Key("F9") + "天の川展示へ   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("M") + "音   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
-                Key("点击") + "缩放到行星   " + Key("F1") + "行星导览(N/B)   " + Key("F2") + "真实比例   " + Key("F9") + "去银河系展区   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("M") + "声音   " + Key("K") + "语言   " + Key("H") + "帮助");
+                Key("클릭") + "행성 줌인   " + Key("F1") + "행성 투어(N/B)   " + Key("F2") + "진짜 크기   " + Key("F9") + "우리은하 전시로   " + Key("F10") + "처음으로   " + Key("우클릭") + "회전   " + Key("휠") + "줌   " + Key("M") + "소리   " + Key("K") + "언어   " + Key("H") + "도움말",
+                Key("Click") + "zoom to planet   " + Key("F1") + "planet tour(N/B)   " + Key("F2") + "the true scale   " + Key("F9") + "to the Milky Way   " + Key("F10") + "title   " + Key("R-drag") + "orbit   " + Key("wheel") + "zoom   " + Key("M") + "sound   " + Key("K") + "language   " + Key("H") + "help",
+                Key("クリック") + "惑星ズーム   " + Key("F1") + "惑星ツアー(N/B)   " + Key("F2") + "本当の縮尺   " + Key("F9") + "天の川展示へ   " + Key("F10") + "最初へ   " + Key("右ドラッグ") + "回転   " + Key("ホイール") + "ズーム   " + Key("M") + "音   " + Key("K") + "言語   " + Key("H") + "ヘルプ",
+                Key("点击") + "缩放到行星   " + Key("F1") + "行星导览(N/B)   " + Key("F2") + "真实比例   " + Key("F9") + "去银河系展区   " + Key("F10") + "回标题   " + Key("右键拖动") + "旋转   " + Key("滚轮") + "缩放   " + Key("M") + "声音   " + Key("K") + "语言   " + Key("H") + "帮助");
         }
     }
 }

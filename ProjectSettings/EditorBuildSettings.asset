@@ -6,6 +6,9 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/TitleScreen.unity
+    guid: aba5f1af298c84e42b87cd40945119f5
+  - enabled: 1
     path: Assets/BlackHoleEffect/Scenes/BlackHoleShowcase.unity
     guid: d4b641f4463f65d469c25d508846ebd5
   - enabled: 1

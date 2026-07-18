@@ -337,6 +337,17 @@ namespace BlackHoleEffect
                 }
                 if (isOurs) mine.Add(e);
                 else if (live == null && HasMatchingModule(e)) live = e;
+                else if (!WorldSpace && e.GetComponent<XRUIInputModule>() != null)
+                {
+                    // The XR rig parks its EventSystem in DontDestroyOnLoad, so
+                    // returning from an MR scene to a desktop one (the title
+                    // screen) strands it here with the wrong module — a rival
+                    // that spams "2 event systems" and can steal clicks. With
+                    // no XR origin in the scene it is provably residue; strip
+                    // the components, leave the foreign GameObject shell alone.
+                    Object.DestroyImmediate(e.GetComponent<UnityEngine.EventSystems.BaseInputModule>());
+                    Object.DestroyImmediate(e);
+                }
             }
 
             if (live != null)
