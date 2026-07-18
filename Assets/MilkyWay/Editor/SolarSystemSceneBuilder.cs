@@ -37,6 +37,10 @@ namespace MilkyWay.Editor
             // Our own material instance of the black-hole skybox (never the
             // shared BH .mat — its experiences boost that asset's values).
             var sky = SaveMaterial("SolarSkybox", skyShader);
+            // Hide the Milky-Way band: from inside the solar system the distant
+            // galaxy is a distraction from the planets on display. Keep the
+            // plain starfield (density/nebula) as the backdrop.
+            sky.SetFloat("_BandStrength", 0f);
             RenderSettings.skybox = sky;
             RenderSettings.ambientMode = AmbientMode.Flat;
             RenderSettings.ambientLight = Color.black;

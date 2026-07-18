@@ -51,7 +51,8 @@ namespace MilkyWay
         Transform[] sstars;
         float[] sA, sE, sTh, sK;
         Quaternion[] sPlane;
-        Material sstarMat;
+        Material[] sstarMats;
+        Color[] sBaseColor;
         Texture2D sstarTex;
 
         // Tightened 2026-07: the crossover's length was narration-bound (the
@@ -140,9 +141,15 @@ namespace MilkyWay
         {
             if (swarm != null) return;
             swarm = new GameObject("S-Stars");
-            const int n = 9;
+            // The narration promises stars "millions of times denser" than
+            // around the Sun; 9 sparse points read as blowing snow instead. A
+            // fuller cluster, concentrated toward the centre and reddened by
+            // the dust the narration names, reads as the nuclear star cluster
+            // real IR/radio surveys reveal at the galactic core.
+            const int n = 46;
             sstars = new Transform[n]; sA = new float[n]; sE = new float[n];
             sTh = new float[n]; sK = new float[n]; sPlane = new Quaternion[n];
+            sstarMats = new Material[n]; sBaseColor = new Color[n];
 
             sstarTex = new Texture2D(64, 64, TextureFormat.RGBA32, false);
             for (int y = 0; y < 64; y++)
@@ -153,8 +160,7 @@ namespace MilkyWay
                     sstarTex.SetPixel(x, y, new Color(1f, 1f, 1f, Mathf.Clamp01(g)));
                 }
             sstarTex.Apply();
-            sstarMat = new Material(Shader.Find("Sprites/Default"))
-                { mainTexture = sstarTex, renderQueue = 3100 };
+            var shader = Shader.Find("Sprites/Default");
 
             var rng = new System.Random(41);
             for (int i = 0; i < n; i++)
@@ -163,13 +169,25 @@ namespace MilkyWay
                 Destroy(go.GetComponent<Collider>());
                 go.name = "S" + i;
                 go.transform.SetParent(swarm.transform, false);
-                go.transform.localScale = Vector3.one * (0.010f + 0.008f * (float)rng.NextDouble());
+                // A few bright giants, many faint members.
+                float sz = 0.006f + 0.016f * Mathf.Pow((float)rng.NextDouble(), 2.2f);
+                go.transform.localScale = Vector3.one * sz;
                 var mr = go.GetComponent<MeshRenderer>();
-                mr.sharedMaterial = sstarMat;
+                var m = new Material(shader) { mainTexture = sstarTex, renderQueue = 3100 };
+                mr.sharedMaterial = m;
                 mr.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
                 mr.receiveShadows = false;
-                sA[i] = 0.09f + 0.30f * (float)rng.NextDouble();
-                sE[i] = 0.35f + 0.45f * (float)rng.NextDouble();
+                sstarMats[i] = m;
+                // Dust reddening toward the core: mostly deep amber/orange with
+                // a few redder members — the colour the galactic centre really
+                // shows once you cut through to it.
+                float t = (float)rng.NextDouble();
+                sBaseColor[i] = Color.Lerp(new Color(1f, 0.55f, 0.30f),  // reddened
+                                           new Color(1f, 0.82f, 0.55f),  // warm amber
+                                           t * t);
+                // Concentrate toward the centre (^1.6 biases small radii).
+                sA[i] = 0.045f + 0.34f * Mathf.Pow((float)rng.NextDouble(), 1.6f);
+                sE[i] = 0.30f + 0.45f * (float)rng.NextDouble();
                 sTh[i] = (float)rng.NextDouble() * Mathf.PI * 2f;
                 sK[i] = 0.9f + 0.5f * (float)rng.NextDouble();
                 sPlane[i] = Quaternion.Euler(360f * (float)rng.NextDouble(),
@@ -181,8 +199,14 @@ namespace MilkyWay
 
         void SetSwarmAlpha(float a)
         {
-            if (sstarMat != null)
-                sstarMat.color = new Color(1f, 0.93f, 0.78f, Mathf.Clamp01(a));
+            if (sstarMats == null) return;
+            a = Mathf.Clamp01(a);
+            for (int i = 0; i < sstarMats.Length; i++)
+                if (sstarMats[i] != null)
+                {
+                    var c = sBaseColor[i]; c.a = a;
+                    sstarMats[i].color = c;
+                }
         }
 
         void UpdateSwarm(float dt)
@@ -204,9 +228,10 @@ namespace MilkyWay
         void DestroySwarm()
         {
             if (swarm != null) Destroy(swarm);
-            if (sstarMat != null) Destroy(sstarMat);
+            if (sstarMats != null)
+                foreach (var m in sstarMats) if (m != null) Destroy(m);
             if (sstarTex != null) Destroy(sstarTex);
-            swarm = null; sstarMat = null; sstarTex = null;
+            swarm = null; sstarMats = null; sstarTex = null;
         }
 
         // A beat may only fire once its predecessor's voice has finished —
@@ -287,9 +312,11 @@ namespace MilkyWay
             }
 
             // Final beat at the core: the dust wall, the radio image, the exit.
+            // A slow drift, not a whirl — you have arrived among the cluster,
+            // you are not blowing through it.
             while (!NarrationDone)
             {
-                transform.RotateAround(Vector3.zero, Vector3.up, 1.2f * Time.deltaTime);
+                transform.RotateAround(Vector3.zero, Vector3.up, 0.6f * Time.deltaTime);
                 UpdateSwarm(Time.deltaTime);
                 yield return null;
             }
@@ -297,7 +324,7 @@ namespace MilkyWay
             Caption(Loc.T(NarrationLines[2], NarrationLinesEn[2], NarrationLinesJa[2], NarrationLinesZh[2]));
             for (float t = 0f, dur = Mathf.Max(6f, len2 - 1.5f); t < dur; t += Time.deltaTime)
             {
-                transform.RotateAround(Vector3.zero, Vector3.up, 1.2f * Time.deltaTime);
+                transform.RotateAround(Vector3.zero, Vector3.up, 0.6f * Time.deltaTime);
                 UpdateSwarm(Time.deltaTime);
                 yield return null;
             }

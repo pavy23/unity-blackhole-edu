@@ -94,7 +94,7 @@ float3 bh_starTint(float t)
 // Long-exposure telescope sky: three star layers with realistic color
 // temperatures, gaussian PSF cores + wide faint halos, diffraction spikes on
 // the brightest stars, a Milky-Way band with dust lanes, and two-tone nebula.
-float3 bh_starField(float3 rd, float density, float nebula)
+float3 bh_starField(float3 rd, float density, float nebula, float bandStrength)
 {
     float3 col = float3(0.0, 0.0, 0.0);
 
@@ -110,7 +110,10 @@ float3 bh_starField(float3 rd, float density, float nebula)
     // --- Milky-Way band: a tilted great circle of dense unresolved stars ---
     const float3 bandN = normalize(float3(0.28, 0.87, 0.40));
     float bandDist = dot(rdw, bandN); // warped → ragged, natural band edges
-    float band = exp(-bandDist * bandDist * 34.0);
+    // bandStrength lets a scene hide the Milky-Way band while keeping the
+    // plain starfield — the solar-system exhibit turns it off so the galaxy
+    // isn't seen from inside it.
+    float band = exp(-bandDist * bandDist * 34.0) * bandStrength;
     if (band > 0.003)
     {
         // Unresolved star glow, broken by dark dust lanes.
@@ -169,6 +172,12 @@ float3 bh_starField(float3 rd, float density, float nebula)
         col += star * bright * tint;
     }
     return col;
+}
+
+// Back-compat overload: full-strength Milky-Way band (the black-hole scenes).
+float3 bh_starField(float3 rd, float density, float nebula)
+{
+    return bh_starField(rd, density, nebula, 1.0);
 }
 
 #endif

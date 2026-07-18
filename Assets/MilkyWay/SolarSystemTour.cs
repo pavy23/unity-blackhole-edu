@@ -295,6 +295,7 @@ namespace MilkyWay
                     // The stage outlives the tour: hand it back as found.
                     rig.motionScale = savedMotionScale;
                     rig.SetOrbitLinesVisible(true);
+                    rig.SetSunGlow(1f); // restore the Sun's full glow for the overview
                 }
                 else Destroy(rig.gameObject);
             }
@@ -330,6 +331,10 @@ namespace MilkyWay
             NarrationManager.Instance.Play("mw_sol_" + step);
 
             var s = Stops[step];
+            // Dim the Sun's glow when framing a planet — the three-quarter view
+            // keeps the Sun near the frame and its bloom otherwise hazes the
+            // planet. At the Sun's own stop, leave it full brightness.
+            if (rig != null) rig.SetSunGlow(s.body == "Sun" ? 1f : 0f);
             EnsureCard();
             card.gameObject.SetActive(true);
             cardTitle.text = Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);

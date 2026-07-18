@@ -6,6 +6,7 @@ Shader "BlackHole/StarfieldSkybox"
     {
         _StarDensity("Star Density", Range(0.0, 2.0)) = 0.8
         _NebulaIntensity("Nebula Haze", Range(0.0, 1.0)) = 0.3
+        _BandStrength("Milky-Way Band", Range(0.0, 1.0)) = 1.0
     }
 
     SubShader
@@ -25,7 +26,7 @@ Shader "BlackHole/StarfieldSkybox"
             #include "StarFunctions.hlsl"
 
             CBUFFER_START(UnityPerMaterial)
-                float _StarDensity, _NebulaIntensity;
+                float _StarDensity, _NebulaIntensity, _BandStrength;
             CBUFFER_END
 
             struct Attributes
@@ -55,7 +56,7 @@ Shader "BlackHole/StarfieldSkybox"
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
                 float3 rd = normalize(i.dir);
-                return half4(bh_starField(rd, _StarDensity, _NebulaIntensity), 1.0);
+                return half4(bh_starField(rd, _StarDensity, _NebulaIntensity, _BandStrength), 1.0);
             }
             ENDHLSL
         }

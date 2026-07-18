@@ -79,6 +79,9 @@ namespace MilkyWay
         readonly List<PlanetRec> planetRecs = new();
         readonly List<GameObject> moonPivots = new();
         Transform sunT;
+        Material sunMat;
+        Color sunBaseColor;
+        float sunBaseCorona, sunBaseRim;
         Mesh ringMesh, sphereMesh;
 
         // 1 AU = 23,455 Earth radii; Earth's radius in AU, for the true map.
@@ -134,6 +137,22 @@ namespace MilkyWay
                 float a = k / (float)n * Mathf.PI * 2f;
                 line.SetPosition(k, new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * radius);
             }
+        }
+
+        /// <summary>Dim the Sun's emission/corona so its bloom doesn't wash out
+        /// a planet framed with the Sun behind it. t = 1 is full brightness,
+        /// t = 0 is the dimmed close-up state. Only the glow scales — the
+        /// photosphere stays lit enough to read as the Sun if it's in frame.</summary>
+        public void SetSunGlow(float t)
+        {
+            if (sunMat == null) return;
+            t = Mathf.Clamp01(t);
+            // Below 1.0 the HDR colour stops blooming (bloom threshold ~1.05);
+            // 0.42 keeps the disk visible without the haze.
+            sunMat.SetColor("_StarColor", sunBaseColor * Mathf.Lerp(0.42f, 1f, t));
+            sunMat.SetFloat("_CoronaBoost", sunBaseCorona * Mathf.Lerp(0.15f, 1f, t));
+            if (sunMat.HasProperty("_RimBoost"))
+                sunMat.SetFloat("_RimBoost", sunBaseRim * Mathf.Lerp(0.4f, 1f, t));
         }
 
         /// <summary>Orbit guide lines read well from the journey's distance
@@ -507,6 +526,10 @@ namespace MilkyWay
                 }
                 sun.GetComponent<MeshRenderer>().sharedMaterial = m;
                 mats.Add(m);
+                sunMat = m;
+                sunBaseColor = m.GetColor("_StarColor");
+                sunBaseCorona = m.GetFloat("_CoronaBoost");
+                sunBaseRim = m.HasProperty("_RimBoost") ? m.GetFloat("_RimBoost") : 0.5f;
             }
             bodies["Sun"] = sun.transform;
             visuals["Sun"] = sun.transform;

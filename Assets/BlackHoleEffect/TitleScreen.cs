@@ -19,25 +19,25 @@ namespace BlackHoleEffect
 
         struct Card
         {
-            public string scene;
+            public string scene, image;
             public System.Func<string> title, blurb;
         }
 
         static readonly Card[] Cards =
         {
-            new Card { scene = "SolarSystemShowcase",
+            new Card { scene = "SolarSystemShowcase", image = "TitleCards/card_solar",
                 title = () => Loc.T("태양계", "Solar System", "太陽系", "太阳系"),
                 blurb = () => Loc.T("우리 동네 여덟 행성 —\n궤도와 진짜 크기의 이야기",
                                     "Our eight neighbours —\norbits, and the true scale",
                                     "私たちのご近所、8つの惑星 —\n軌道と本当の縮尺",
                                     "我们的八颗行星——\n轨道与真实比例") },
-            new Card { scene = "MilkyWayShowcase",
+            new Card { scene = "MilkyWayShowcase", image = "TitleCards/card_galaxy",
                 title = () => Loc.T("우리은하", "Milky Way", "天の川銀河", "银河系"),
                 blurb = () => Loc.T("수천억 개의 별이 이루는\n나선 소용돌이를 여행",
                                     "A journey through the spiral\nof hundreds of billions of stars",
                                     "数千億の星がつくる\n渦巻きを旅する",
                                     "穿越数千亿颗恒星\n组成的旋涡") },
-            new Card { scene = "BlackHoleShowcase",
+            new Card { scene = "BlackHoleShowcase", image = "TitleCards/card_blackhole",
                 title = () => Loc.T("블랙홀", "Black Hole", "ブラックホール", "黑洞"),
                 blurb = () => Loc.T("빛마저 갇히는 곳 —\n중력이 만드는 극한의 세계",
                                     "Where even light is trapped —\ngravity at its most extreme",
@@ -113,11 +113,51 @@ namespace BlackHoleEffect
                 // it back on — without this only the number keys select.
                 var cardImg = card.GetComponent<Image>();
                 cardImg.raycastTarget = true;
+                Graphic hoverTarget = cardImg;
+
+                // A screenshot of the scene fills the card. The rounded panel
+                // image doubles as a Mask so the photo gets the card's rounded
+                // corners; a scrim over it keeps the title/blurb readable on
+                // bright regions (the galaxy core, the disk) and doubles as the
+                // hover target — hovering thins it, brightening the scene.
+                var photoSprite = Resources.Load<Sprite>(Cards[i].image);
+                if (photoSprite != null)
+                {
+                    card.gameObject.AddComponent<Mask>().showMaskGraphic = true;
+
+                    var photo = new GameObject("Photo", typeof(RectTransform), typeof(Image));
+                    var pr = (RectTransform)photo.transform;
+                    pr.SetParent(card, false);
+                    pr.anchorMin = pr.anchorMax = pr.pivot = new Vector2(0.5f, 0.5f);
+                    // Cover the card without distortion: fit by height, let the
+                    // wider 16:9 frame overflow and be clipped by the mask.
+                    float aspect = photoSprite.rect.width / photoSprite.rect.height;
+                    pr.sizeDelta = new Vector2(cardH * aspect, cardH);
+                    var pimg = photo.GetComponent<Image>();
+                    pimg.sprite = photoSprite;
+                    pimg.preserveAspect = true;
+                    pimg.raycastTarget = false;
+                    pr.SetSiblingIndex(0);
+
+                    var scrim = new GameObject("Scrim", typeof(RectTransform), typeof(Image));
+                    var sr = (RectTransform)scrim.transform;
+                    sr.SetParent(card, false);
+                    sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
+                    sr.offsetMin = sr.offsetMax = Vector2.zero;
+                    var simg = scrim.GetComponent<Image>();
+                    simg.color = new Color(0.03f, 0.04f, 0.07f, 0.5f);
+                    simg.raycastTarget = false;
+                    sr.SetSiblingIndex(1);
+                    hoverTarget = simg;
+                }
+
                 var btn = card.gameObject.AddComponent<Button>();
-                btn.targetGraphic = cardImg;
+                btn.targetGraphic = hoverTarget;
                 var colors = btn.colors;
-                colors.highlightedColor = new Color(1.25f, 1.2f, 1.05f, 1f);
-                colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+                // Tint multiplies the scrim: alpha < 1 thins it on hover so the
+                // scene brightens; pressed darkens briefly.
+                colors.highlightedColor = new Color(1f, 1f, 1f, 0.45f);
+                colors.pressedColor = new Color(1f, 1f, 1f, 0.85f);
                 btn.colors = colors;
                 btn.onClick.AddListener(() => Load(idx));
 
