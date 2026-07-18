@@ -25,6 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
+    - _BandStrength: 1
     - _NebulaIntensity: 0.15
     - _StarDensity: 0.12
     m_Colors: []

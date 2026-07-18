@@ -51,134 +51,62 @@ namespace MilkyWay
         void Start()
         {
             if (Application.isPlaying) LanguageSelect.CreateWidget();
-            BuildHelp();
+            // The K-key language handler used to refresh a running tour's card;
+            // now that language changes come from the LanguageSelect widget,
+            // relay them the same way.
+            Loc.Changed -= OnLocChanged;
+            Loc.Changed += OnLocChanged;
+        }
+
+        void OnDestroy() { Loc.Changed -= OnLocChanged; }
+
+        void OnLocChanged()
+        {
+            if (tour != null) tour.OnLanguageChanged();
+            if (solarTour != null) solarTour.OnLanguageChanged();
+            if (zoo != null) zoo.OnLanguageChanged();
         }
 
         void Update()
         {
-            ReadHotkeys();
+            ReadTourNav();
             if (!AnyPlaying)
                 ReadMouse();
-            if (helpBar != null)
-            {
-                helpBar.SetActive(showHelp && !AnyPlaying);
-                if (helpLocVersion != Loc.Version) { helpLocVersion = Loc.Version; UpdateHelpText(); }
-            }
         }
 
-        void ReadHotkeys()
+        // ---- toolbar entry points (click-only UI; guards centralized here) ---
+        public bool Busy => AnyPlaying;
+        public void PlayJourney() { if (journey != null && !AnyPlaying) journey.Begin(); }
+        public void PlayNightSky() { if (nightSky != null && !AnyPlaying) nightSky.Begin(); }
+        public void PlayAndromeda() { if (andromeda != null && !AnyPlaying) andromeda.Begin(); }
+        public void ToggleTour() { if (tour == null) return; if (tour.Running) tour.StopTour(); else if (!AnyPlaying) tour.StartTour(); }
+        public void PlayCosmicZoom() { if (cosmicZoom != null && !AnyPlaying) cosmicZoom.Begin(); }
+        public void ToggleSolarTour() { if (solarTour == null) return; if (solarTour.Running) solarTour.StopTour(); else if (!AnyPlaying) solarTour.StartTour(); }
+        public void ToggleRotationLab() { if (rotationLab == null) return; if (rotationLab.IsPlaying) rotationLab.Abort(); else if (!AnyPlaying) rotationLab.Begin(); }
+        public void ToggleZoo() { if (zoo == null) return; if (zoo.Running) zoo.StopZoo(); else if (!AnyPlaying) zoo.StartZoo(); }
+        public void PlaySgrA() { if (sgrA != null && !AnyPlaying) sgrA.Begin(); }
+        public void ToggleMute() { if (audioScape != null) audioScape.muted = !audioScape.muted; }
+        public static void LoadScene(string s) => UnityEngine.SceneManagement.SceneManager.LoadScene(s);
+
+        /// <summary>The only key left is the arrows, to step whichever tour is
+        /// running — everything else is a toolbar button (see MilkyWayToolbar)
+        /// so WebGL never collides with browser shortcuts.</summary>
+        void ReadTourNav()
         {
+            bool next = false, prev = false;
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
-            if (kb.f1Key.wasPressedThisFrame && journey != null && !AnyPlaying) journey.Begin();
-            if (kb.f2Key.wasPressedThisFrame && nightSky != null && !AnyPlaying) nightSky.Begin();
-            if (kb.f3Key.wasPressedThisFrame && andromeda != null && !AnyPlaying) andromeda.Begin();
-            if (kb.f5Key.wasPressedThisFrame && cosmicZoom != null && !AnyPlaying) cosmicZoom.Begin();
-            if (kb.f4Key.wasPressedThisFrame && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!AnyPlaying) tour.StartTour();
-            }
-            if (kb.f6Key.wasPressedThisFrame && solarTour != null)
-            {
-                if (solarTour.Running) solarTour.StopTour();
-                else if (!AnyPlaying) solarTour.StartTour();
-            }
-            if (kb.f7Key.wasPressedThisFrame && rotationLab != null)
-            {
-                if (rotationLab.IsPlaying) rotationLab.Abort();
-                else if (!AnyPlaying) rotationLab.Begin();
-            }
-            if (kb.f8Key.wasPressedThisFrame && zoo != null)
-            {
-                if (zoo.Running) zoo.StopZoo();
-                else if (!AnyPlaying) zoo.StartZoo();
-            }
-            if (kb.f9Key.wasPressedThisFrame && sgrA != null && !AnyPlaying) sgrA.Begin();
-            if (kb.f11Key.wasPressedThisFrame && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("SolarSystemShowcase");
-            if (kb.f10Key.wasPressedThisFrame && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (tour != null && tour.Running)
-            {
-                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
-                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
-            }
-            if (solarTour != null && solarTour.Running)
-            {
-                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) solarTour.Next();
-                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) solarTour.Prev();
-            }
-            if (zoo != null && zoo.Running)
-            {
-                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) zoo.Next();
-                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) zoo.Prev();
-            }
-            if (kb.kKey.wasPressedThisFrame)
-            {
-                Loc.Cycle();
-                if (tour != null) tour.OnLanguageChanged();
-                if (solarTour != null) solarTour.OnLanguageChanged();
-                if (zoo != null) zoo.OnLanguageChanged();
-            }
-            if (kb.mKey.wasPressedThisFrame && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
+            next = kb.rightArrowKey.wasPressedThisFrame;
+            prev = kb.leftArrowKey.wasPressedThisFrame;
 #else
-            if (Input.GetKeyDown(KeyCode.F1) && journey != null && !AnyPlaying) journey.Begin();
-            if (Input.GetKeyDown(KeyCode.F2) && nightSky != null && !AnyPlaying) nightSky.Begin();
-            if (Input.GetKeyDown(KeyCode.F3) && andromeda != null && !AnyPlaying) andromeda.Begin();
-            if (Input.GetKeyDown(KeyCode.F5) && cosmicZoom != null && !AnyPlaying) cosmicZoom.Begin();
-            if (Input.GetKeyDown(KeyCode.F4) && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!AnyPlaying) tour.StartTour();
-            }
-            if (Input.GetKeyDown(KeyCode.F6) && solarTour != null)
-            {
-                if (solarTour.Running) solarTour.StopTour();
-                else if (!AnyPlaying) solarTour.StartTour();
-            }
-            if (Input.GetKeyDown(KeyCode.F7) && rotationLab != null)
-            {
-                if (rotationLab.IsPlaying) rotationLab.Abort();
-                else if (!AnyPlaying) rotationLab.Begin();
-            }
-            if (Input.GetKeyDown(KeyCode.F8) && zoo != null)
-            {
-                if (zoo.Running) zoo.StopZoo();
-                else if (!AnyPlaying) zoo.StartZoo();
-            }
-            if (Input.GetKeyDown(KeyCode.F9) && sgrA != null && !AnyPlaying) sgrA.Begin();
-            if (Input.GetKeyDown(KeyCode.F11) && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("SolarSystemShowcase");
-            if (Input.GetKeyDown(KeyCode.F10) && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (tour != null && tour.Running)
-            {
-                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
-                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
-            }
-            if (solarTour != null && solarTour.Running)
-            {
-                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) solarTour.Next();
-                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) solarTour.Prev();
-            }
-            if (zoo != null && zoo.Running)
-            {
-                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) zoo.Next();
-                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) zoo.Prev();
-            }
-            if (Input.GetKeyDown(KeyCode.K))
-            {
-                Loc.Cycle();
-                if (tour != null) tour.OnLanguageChanged();
-                if (solarTour != null) solarTour.OnLanguageChanged();
-                if (zoo != null) zoo.OnLanguageChanged();
-            }
-            if (Input.GetKeyDown(KeyCode.M) && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
+            next = Input.GetKeyDown(KeyCode.RightArrow);
+            prev = Input.GetKeyDown(KeyCode.LeftArrow);
 #endif
+            if (!next && !prev) return;
+            if (tour != null && tour.Running) { if (next) tour.Next(); else tour.Prev(); }
+            else if (solarTour != null && solarTour.Running) { if (next) solarTour.Next(); else solarTour.Prev(); }
+            else if (zoo != null && zoo.Running) { if (next) zoo.Next(); else zoo.Prev(); }
         }
 
         void SyncFromTransform()

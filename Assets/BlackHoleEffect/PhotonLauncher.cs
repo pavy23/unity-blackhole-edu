@@ -88,13 +88,7 @@ namespace BlackHoleEffect
         void Update()
         {
             if (!Application.isPlaying) return;
-            // Space toggles: fire a sweep, press again to clear.
-#if ENABLE_INPUT_SYSTEM
-            var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null && kb.spaceKey.wasPressedThisFrame) ToggleSweep();
-#else
-            if (Input.GetKeyDown(KeyCode.Space)) ToggleSweep();
-#endif
+            // Firing is a toolbar button now (ToggleSweep) — no keyboard.
             if (blackHole == null || trails.Count == 0) return;
             var cam = Camera.main;
             if (cam == null) return;

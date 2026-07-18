@@ -62,22 +62,9 @@ namespace BlackHoleEffect
                 locVersion = Loc.Version;
                 Refresh();
             }
-
-#if ENABLE_INPUT_SYSTEM
-            var kb = UnityEngine.InputSystem.Keyboard.current;
-            if (kb != null)
-            {
-                if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame) Load(0);
-                if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame) Load(1);
-                if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame) Load(2);
-                if (kb.kKey.wasPressedThisFrame) Loc.Cycle();
-            }
-#else
-            if (Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1)) Load(0);
-            if (Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2)) Load(1);
-            if (Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3)) Load(2);
-            if (Input.GetKeyDown(KeyCode.K)) Loc.Cycle();
-#endif
+            // Click-only: the cards and the language buttons are the whole UI.
+            // (No number/K shortcuts — they typed into browser fields and don't
+            // survive the move to a click-driven exhibit.)
         }
 
         static void Load(int i) =>
@@ -211,10 +198,10 @@ namespace BlackHoleEffect
                                   "Choose the cosmos you want to explore",
                                   "体験する宇宙を選んでください",
                                   "请选择要探索的宇宙");
-            hint.text = Loc.T("카드를 클릭하거나 1 · 2 · 3 키로 선택   ·   K 언어",
-                              "Click a card or press 1 · 2 · 3   ·   K language",
-                              "カードをクリック、または 1 · 2 · 3 キー   ·   K 言語",
-                              "点击卡片或按 1 · 2 · 3 键   ·   K 语言");
+            hint.text = Loc.T("체험할 카드를 클릭하세요",
+                              "Click a card to begin",
+                              "体験するカードをクリック",
+                              "点击卡片开始体验");
             foreach (var (label, text) in cardTexts)
                 if (label != null) label.text = text();
 

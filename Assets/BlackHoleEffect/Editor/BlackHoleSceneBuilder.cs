@@ -166,6 +166,11 @@ namespace BlackHoleEffect.Editor
             intro.controls = controls;
             fallIn.controls = controls;
 
+            // Click-only control surface (the keyboard shortcuts are gone so the
+            // exhibit works in a browser).
+            var toolbar = cameraGO.AddComponent<DesktopToolbar>();
+            toolbar.controls = controls;
+
             SetupPostProcessing();
             SetDisplayDefaults();
             EditorSceneManager.SaveScene(scene, ScenePath);

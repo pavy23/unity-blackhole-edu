@@ -267,6 +267,29 @@ namespace BlackHoleEffect
         bool immersive;
 
         /// <summary>Full immersion: hides every overlay and label at once (U key).</summary>
+        // ---- toolbar entry points (the click-only UI calls these; the guard
+        // logic that used to live in the hotkey reader lives here now) --------
+        public void ToggleTour()
+        {
+            if (tour == null) return;
+            if (tour.Running) tour.StopTour();
+            else if (!CinematicBusy) tour.StartTour();
+        }
+        public void PlayIntro() { if (intro != null && !CinematicBusy) intro.Play(); }
+        public void BeginFallIn() { if (fallIn != null && !CinematicBusy) fallIn.Begin(); }
+        public void BeginMerger() { if (binary != null && !CinematicBusy) binary.Begin(); }
+        public void ToggleLabels() { if (annotations != null) annotations.showLabels = !annotations.showLabels; }
+        public void TogglePanel() { if (panel != null) { panel.show = !panel.show; panel.RefreshText(); } }
+        public void ToggleHud() { if (hud != null) hud.show = !hud.show; }
+        public void ToggleTheory() { if (theory != null) theory.Toggle(); }
+        public void ToggleMute() { if (audioScape != null) audioScape.muted = !audioScape.muted; }
+        public void FirePhotons() { if (launcher != null) launcher.ToggleSweep(); }
+        public bool TourRunning => tour != null && tour.Running;
+        public bool Immersive => immersive;
+        public void TourNext() { if (tour != null && tour.Running) tour.Next(); }
+        public void TourPrev() { if (tour != null && tour.Running) tour.Prev(); }
+        public static void LoadScene(string s) => UnityEngine.SceneManagement.SceneManager.LoadScene(s);
+
         public void SetImmersive(bool on)
         {
             immersive = on;
@@ -286,7 +309,8 @@ namespace BlackHoleEffect
             initialPos = transform.position;
             initialRot = transform.rotation;
             SyncFromTransform();
-            BuildHelp();
+            // The old keyboard-legend help bar is gone — DesktopToolbar's
+            // clickable buttons are the control surface now.
 
             // Theory (수식) panel lives on the camera, wired from our own refs
             // so the saved scene needs no changes.
@@ -357,7 +381,6 @@ namespace BlackHoleEffect
             ExplainCard.Suppress = (tour != null && tour.Running) || CinematicBusy || immersive;
             ReadHotkeys();
             ReadMouse();
-            if (helpBar != null) helpBar.SetActive(showHelp && (tour == null || !tour.Running));
         }
 
         void ReadMouse()
@@ -376,19 +399,11 @@ namespace BlackHoleEffect
                 // Windows reports ±120 per notch, some devices ±1. Normalize.
                 if (Mathf.Abs(scroll) > 10f) scroll /= 120f;
             }
-            var kb = Keyboard.current;
-            if (kb != null)
-            {
-                zoomIn = kb.wKey.isPressed;
-                zoomOut = kb.sKey.isPressed;
-            }
 #else
             dragging = Input.GetMouseButton(1);
             dx = Input.GetAxis("Mouse X") * 12f;
             dy = Input.GetAxis("Mouse Y") * 12f;
             scroll = Input.mouseScrollDelta.y;
-            zoomIn = Input.GetKey(KeyCode.W);
-            zoomOut = Input.GetKey(KeyCode.S);
 #endif
             bool zooming = !Mathf.Approximately(scroll, 0f) || zoomIn || zoomOut;
             if (!dragging && !zooming) return;
@@ -437,122 +452,21 @@ namespace BlackHoleEffect
             (fallIn != null && fallIn.IsFalling) ||
             (binary != null && binary.Running);
 
+        /// <summary>Every feature is a toolbar button now — the only keys left
+        /// are the arrows, kept as a convenience for stepping a running tour
+        /// (they don't clash with browser shortcuts). Everything else moved to
+        /// <see cref="DesktopToolbar"/> so WebGL never fights the browser.</summary>
         void ReadHotkeys()
         {
+            if (tour == null || !tour.Running) return;
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
-            bool owned = VisualsOwnedByCinematic;
-            // Black-hole setup: numbers.
-            if (!owned)
-            {
-                if (kb.digit1Key.wasPressedThisFrame) CycleColor();
-                if (kb.digit2Key.wasPressedThisFrame) CycleMass();
-                if (kb.digit3Key.wasPressedThisFrame) CycleSpin();
-            }
-            if (kb.digit4Key.wasPressedThisFrame) CycleComparison();
-            // Experiences: F1–F4 (one at a time).
-            if (kb.f1Key.wasPressedThisFrame && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!CinematicBusy) tour.StartTour();
-            }
-            if (!CinematicBusy)
-            {
-                if (kb.f2Key.wasPressedThisFrame && intro != null) intro.Play();
-                if (kb.f3Key.wasPressedThisFrame && fallIn != null) fallIn.Begin();
-                if (kb.f4Key.wasPressedThisFrame && binary != null) binary.Begin();
-            }
-            // Phenomena & controls: letters.
-            if (!owned)
-            {
-                if (kb.eKey.wasPressedThisFrame) ToggleEinstein();
-                if (kb.tKey.wasPressedThisFrame) ToggleSpaghetti();
-                if (kb.jKey.wasPressedThisFrame) ToggleJets();
-                if (kb.gKey.wasPressedThisFrame) ToggleLens();
-                if (kb.vKey.wasPressedThisFrame) ToggleLightCurve();
-            }
-            if (kb.cKey.wasPressedThisFrame) CycleDifficulty();
-            if (kb.lKey.wasPressedThisFrame && annotations != null) annotations.showLabels = !annotations.showLabels;
-            if (kb.iKey.wasPressedThisFrame && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
-            if (kb.pKey.wasPressedThisFrame && hud != null) hud.show = !hud.show;
-            if (kb.f12Key.wasPressedThisFrame) Snapshot();
-            if (kb.f9Key.wasPressedThisFrame && !CinematicBusy)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
-            if (kb.f10Key.wasPressedThisFrame && !CinematicBusy)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
-            if (kb.uKey.wasPressedThisFrame) SetImmersive(!immersive);
-            if (kb.rKey.wasPressedThisFrame) ResetCamera();
-            if (kb.mKey.wasPressedThisFrame && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (kb.xKey.wasPressedThisFrame && theory != null) theory.Toggle();
-            if (kb.kKey.wasPressedThisFrame) ToggleLanguage();
-            if (tour != null)
-            {
-                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
-                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
-            }
-            if (einsteinDemo != null && einsteinDemo.active)
-            {
-                if (kb.aKey.isPressed) einsteinDemo.Nudge(-12f * Time.deltaTime);
-                if (kb.dKey.isPressed) einsteinDemo.Nudge(12f * Time.deltaTime);
-            }
+            if (kb.rightArrowKey.wasPressedThisFrame) tour.Next();
+            if (kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
 #else
-            bool owned = VisualsOwnedByCinematic;
-            // Black-hole setup: numbers.
-            if (!owned)
-            {
-                if (Input.GetKeyDown(KeyCode.Alpha1)) CycleColor();
-                if (Input.GetKeyDown(KeyCode.Alpha2)) CycleMass();
-                if (Input.GetKeyDown(KeyCode.Alpha3)) CycleSpin();
-            }
-            if (Input.GetKeyDown(KeyCode.Alpha4)) CycleComparison();
-            // Experiences: F1–F4 (one at a time).
-            if (Input.GetKeyDown(KeyCode.F1) && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!CinematicBusy) tour.StartTour();
-            }
-            if (!CinematicBusy)
-            {
-                if (Input.GetKeyDown(KeyCode.F2) && intro != null) intro.Play();
-                if (Input.GetKeyDown(KeyCode.F3) && fallIn != null) fallIn.Begin();
-                if (Input.GetKeyDown(KeyCode.F4) && binary != null) binary.Begin();
-            }
-            // Phenomena & controls: letters.
-            if (!owned)
-            {
-                if (Input.GetKeyDown(KeyCode.E)) ToggleEinstein();
-                if (Input.GetKeyDown(KeyCode.T)) ToggleSpaghetti();
-                if (Input.GetKeyDown(KeyCode.J)) ToggleJets();
-                if (Input.GetKeyDown(KeyCode.G)) ToggleLens();
-                if (Input.GetKeyDown(KeyCode.V)) ToggleLightCurve();
-            }
-            if (Input.GetKeyDown(KeyCode.C)) CycleDifficulty();
-            if (Input.GetKeyDown(KeyCode.L) && annotations != null) annotations.showLabels = !annotations.showLabels;
-            if (Input.GetKeyDown(KeyCode.I) && panel != null) { panel.show = !panel.show; panel.RefreshText(); }
-            if (Input.GetKeyDown(KeyCode.P) && hud != null) hud.show = !hud.show;
-            if (Input.GetKeyDown(KeyCode.F12)) Snapshot();
-            if (Input.GetKeyDown(KeyCode.F9) && !CinematicBusy)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
-            if (Input.GetKeyDown(KeyCode.F10) && !CinematicBusy)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
-            if (Input.GetKeyDown(KeyCode.U)) SetImmersive(!immersive);
-            if (Input.GetKeyDown(KeyCode.R)) ResetCamera();
-            if (Input.GetKeyDown(KeyCode.M) && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (Input.GetKeyDown(KeyCode.X) && theory != null) theory.Toggle();
-            if (Input.GetKeyDown(KeyCode.K)) ToggleLanguage();
-            if (tour != null)
-            {
-                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
-                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
-            }
-            if (einsteinDemo != null && einsteinDemo.active)
-            {
-                if (Input.GetKey(KeyCode.A)) einsteinDemo.Nudge(-12f * Time.deltaTime);
-                if (Input.GetKey(KeyCode.D)) einsteinDemo.Nudge(12f * Time.deltaTime);
-            }
+            if (Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
+            if (Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
 #endif
         }
 
@@ -592,7 +506,7 @@ namespace BlackHoleEffect
             if (toast != null) toast.transform.parent.gameObject.SetActive(false);
         }
 
-        void ResetCamera()
+        public void ResetCamera()
         {
             // In MR the pose comes from head tracking; writing it here would be
             // overwritten next frame at best, and fight the tracking at worst.

@@ -159,6 +159,9 @@ namespace MilkyWay.Editor
             controls.sgrA = sgr;
             controls.audioScape = audio;
 
+            var toolbar = camGO.AddComponent<MilkyWayToolbar>();
+            toolbar.controls = controls;
+
             SetupPostProcessing();
 
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -169,29 +172,34 @@ namespace MilkyWay.Editor
         static void SetupPostProcessing()
         {
             const string profilePath = Root + "/Settings/MilkyWayVolume.asset";
-            var old = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
-            if (old) AssetDatabase.DeleteAsset(profilePath);
-
-            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
-
-            var bloom = profile.Add<Bloom>();
-            bloom.active = true;
-            bloom.threshold.Override(1.1f);   // only the genuinely bright cores bloom
-            bloom.intensity.Override(0.9f);
-            bloom.scatter.Override(0.66f);
-            bloom.highQualityFiltering.Override(true);
-
-            var tonemapping = profile.Add<Tonemapping>();
-            tonemapping.active = true;
-            tonemapping.mode.Override(TonemappingMode.ACES);
-
-            var vignette = profile.Add<Vignette>();
-            vignette.active = true;
-            vignette.intensity.Override(0.24f);
-            vignette.smoothness.Override(0.7f);
-            vignette.color.Override(Color.black);
-
-            AssetDatabase.CreateAsset(profile, profilePath);
+            // REUSE the existing profile if present. Deleting and recreating it
+            // hits the VolumeProfile trap: components added via profile.Add<T>()
+            // are NOT persisted by CreateAsset (they need AddObjectToAsset), so
+            // a rebuild would silently empty the profile — Bloom/ACES/Vignette
+            // gone. The committed asset is already correct; keep it (and its
+            // GUID, which the scene references).
+            var profile = AssetDatabase.LoadAssetAtPath<VolumeProfile>(profilePath);
+            if (profile == null)
+            {
+                profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                var bloom = profile.Add<Bloom>();
+                bloom.active = true;
+                bloom.threshold.Override(1.1f);   // only the genuinely bright cores bloom
+                bloom.intensity.Override(0.9f);
+                bloom.scatter.Override(0.66f);
+                bloom.highQualityFiltering.Override(true);
+                var tonemapping = profile.Add<Tonemapping>();
+                tonemapping.active = true;
+                tonemapping.mode.Override(TonemappingMode.ACES);
+                var vignette = profile.Add<Vignette>();
+                vignette.active = true;
+                vignette.intensity.Override(0.24f);
+                vignette.smoothness.Override(0.7f);
+                vignette.color.Override(Color.black);
+                AssetDatabase.CreateAsset(profile, profilePath);
+                foreach (var c in profile.components) AssetDatabase.AddObjectToAsset(c, profile);
+                AssetDatabase.SaveAssets();
+            }
 
             var go = new GameObject("Post Processing (ACES + Bloom)");
             var volume = go.AddComponent<Volume>();

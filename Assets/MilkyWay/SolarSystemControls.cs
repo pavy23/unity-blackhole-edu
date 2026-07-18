@@ -53,12 +53,22 @@ namespace MilkyWay
         void Start()
         {
             if (Application.isPlaying) LanguageSelect.CreateWidget();
-            BuildHelp();
+            Loc.Changed -= OnLocChanged;
+            Loc.Changed += OnLocChanged;
         }
+
+        void OnLocChanged() { if (tour != null) tour.OnLanguageChanged(); }
+
+        // ---- toolbar entry points (click-only UI) ----------------------------
+        public bool Busy => AnyPlaying;
+        public void ToggleTour() { if (tour == null) return; if (tour.Running) tour.StopTour(); else if (!AnyPlaying) tour.StartTour(); }
+        public void ToggleScaleTruth() { if (scaleTruth == null) return; if (scaleTruth.IsPlaying) scaleTruth.Abort(); else if (!AnyPlaying) scaleTruth.Begin(); }
+        public void ToggleMute() { if (audioScape != null) audioScape.muted = !audioScape.muted; }
+        public static void LoadScene(string s) => UnityEngine.SceneManagement.SceneManager.LoadScene(s);
 
         void Update()
         {
-            ReadHotkeys();
+            ReadTourNav();
             if (!AnyPlaying)
                 ReadMouse();
             // Clicking a planet zooms to its tour stop — from FREE FLIGHT
@@ -74,11 +84,6 @@ namespace MilkyWay
                 hoverIndex = -1;
                 if (hoverRing != null) hoverRing.gameObject.SetActive(false);
                 if (tipPanel != null) tipPanel.gameObject.SetActive(false);
-            }
-            if (helpBar != null)
-            {
-                helpBar.SetActive(showHelp && !AnyPlaying);
-                if (helpLocVersion != Loc.Version) { helpLocVersion = Loc.Version; UpdateHelpText(); }
             }
         }
 
@@ -208,64 +213,20 @@ namespace MilkyWay
                 new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(140f, 30f), FontStyle.Bold);
         }
 
-        void ReadHotkeys()
+        /// <summary>Arrows step a running planet tour — the only key left; all
+        /// features are toolbar buttons now (SolarToolbar). Click-a-planet
+        /// picking stays (it's a scene interaction, not a shortcut).</summary>
+        void ReadTourNav()
         {
+            if (tour == null || !tour.Running) return;
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
             if (kb == null) return;
-            if (kb.f1Key.wasPressedThisFrame && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!AnyPlaying) tour.StartTour();
-            }
-            if (kb.f2Key.wasPressedThisFrame && scaleTruth != null)
-            {
-                if (scaleTruth.IsPlaying) scaleTruth.Abort();
-                else if (!AnyPlaying) scaleTruth.Begin();
-            }
-            if (kb.f9Key.wasPressedThisFrame && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
-            if (kb.f10Key.wasPressedThisFrame && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (tour != null && tour.Running)
-            {
-                if (kb.nKey.wasPressedThisFrame || kb.rightArrowKey.wasPressedThisFrame) tour.Next();
-                if (kb.bKey.wasPressedThisFrame || kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
-            }
-            if (kb.kKey.wasPressedThisFrame)
-            {
-                Loc.Cycle();
-                if (tour != null) tour.OnLanguageChanged();
-            }
-            if (kb.mKey.wasPressedThisFrame && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (kb.hKey.wasPressedThisFrame) showHelp = !showHelp;
+            if (kb.rightArrowKey.wasPressedThisFrame) tour.Next();
+            if (kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
 #else
-            if (Input.GetKeyDown(KeyCode.F1) && tour != null)
-            {
-                if (tour.Running) tour.StopTour();
-                else if (!AnyPlaying) tour.StartTour();
-            }
-            if (Input.GetKeyDown(KeyCode.F2) && scaleTruth != null)
-            {
-                if (scaleTruth.IsPlaying) scaleTruth.Abort();
-                else if (!AnyPlaying) scaleTruth.Begin();
-            }
-            if (Input.GetKeyDown(KeyCode.F9) && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("MilkyWayShowcase");
-            if (Input.GetKeyDown(KeyCode.F10) && !AnyPlaying)
-                UnityEngine.SceneManagement.SceneManager.LoadScene("TitleScreen");
-            if (tour != null && tour.Running)
-            {
-                if (Input.GetKeyDown(KeyCode.N) || Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
-                if (Input.GetKeyDown(KeyCode.B) || Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
-            }
-            if (Input.GetKeyDown(KeyCode.K))
-            {
-                Loc.Cycle();
-                if (tour != null) tour.OnLanguageChanged();
-            }
-            if (Input.GetKeyDown(KeyCode.M) && audioScape != null) audioScape.muted = !audioScape.muted;
-            if (Input.GetKeyDown(KeyCode.H)) showHelp = !showHelp;
+            if (Input.GetKeyDown(KeyCode.RightArrow)) tour.Next();
+            if (Input.GetKeyDown(KeyCode.LeftArrow)) tour.Prev();
 #endif
         }
 
@@ -330,6 +291,7 @@ namespace MilkyWay
 
         void OnDestroy()
         {
+            Loc.Changed -= OnLocChanged;
             if (hoverMat != null) Destroy(hoverMat);
             if (ringTex != null) Destroy(ringTex);
         }
