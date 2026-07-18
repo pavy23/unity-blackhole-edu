@@ -5,16 +5,12 @@ using UnityEngine.UI;
 namespace BlackHoleEffect
 {
     /// <summary>
-    /// The desktop control surface, click-only. Every feature that used to be a
-    /// keyboard shortcut is a button here, grouped into rows along the bottom of
-    /// the screen — the same pattern the MR hand-menu uses, but screen-space.
-    /// This is what lets the exhibit run in a browser, where keyboard shortcuts
-    /// collide with the browser's own (F5 reloads, F11 fullscreens, …).
-    ///
-    /// The buttons call straight into <see cref="DesktopControls"/>' public
-    /// methods, so the cycles, toasts and four language variants stay in one
-    /// place. The whole bar hides while a narrated cinematic or the guided tour
-    /// owns the screen, and while the immersive view is on.
+    /// The black-hole exhibit's desktop control surface, click-only. The actions
+    /// are grouped by kind in a single contained bar (see <see cref="ExhibitBar"/>);
+    /// moving to another exhibit is a separate thumbnail cluster in the corner
+    /// (see <see cref="SceneNavigator"/>). Both hide while a cinematic or the
+    /// guided tour owns the screen. Buttons call straight into
+    /// <see cref="DesktopControls"/> so the four language variants stay there.
     /// </summary>
     [DisallowMultipleComponent]
     public class DesktopToolbar : MonoBehaviour
@@ -22,11 +18,10 @@ namespace BlackHoleEffect
         public DesktopControls controls;
 
         readonly List<(Text label, System.Func<string> text)> localized = new();
-        readonly List<GameObject> rows = new();
+        GameObject bar;
+        SceneNavigator nav;
         int locVersion = -1;
         bool shown = true;
-
-        const float BtnW = 138f, BtnH = 40f, Gap = 8f, RowPitch = 46f;
 
         void Start()
         {
@@ -44,13 +39,12 @@ namespace BlackHoleEffect
                     if (label != null) label.text = text();
             }
 
-            // Give the screen to the tours and cinematics (they narrate and put
-            // their own stop button up), and to the immersive view.
             bool wantShown = !(controls.CinematicBusy || controls.Immersive);
             if (wantShown != shown)
             {
                 shown = wantShown;
-                foreach (var r in rows) if (r != null) r.SetActive(shown);
+                if (bar != null) bar.SetActive(shown);
+                if (nav != null) nav.SetVisible(shown);
             }
         }
 
@@ -58,63 +52,58 @@ namespace BlackHoleEffect
         {
             var canvas = BlackHoleUI.EnsureCanvas(Camera.main);
 
-            var experiences = new (System.Func<string>, UnityEngine.Events.UnityAction)[]
+            var groups = new[]
             {
-                (() => Loc.T("가이드 투어", "Guided tour", "ガイドツアー", "导览"), controls.ToggleTour),
-                (() => Loc.T("블랙홀 탄생", "Birth", "誕生", "黑洞诞生"), controls.PlayIntro),
-                (() => Loc.T("낙하 체험", "Fall in", "落下体験", "坠入体验"), controls.BeginFallIn),
-                (() => Loc.T("블랙홀 병합", "Merger", "合体", "黑洞合并"), controls.BeginMerger),
-            };
-            var blackHole = new (System.Func<string>, UnityEngine.Events.UnityAction)[]
-            {
-                (() => Loc.T("원반 색상", "Disk colors", "円盤の色", "吸积盘颜色"), controls.CycleColor),
-                (() => Loc.T("질량", "Mass", "質量", "质量"), controls.CycleMass),
-                (() => Loc.T("스핀", "Spin", "スピン", "自旋"), controls.CycleSpin),
-                (() => Loc.T("관측사진", "EHT photo", "観測写真", "观测照片"), controls.CycleComparison),
-                (() => Loc.T("설명 난이도", "Level", "難易度", "难度"), controls.CycleDifficulty),
-            };
-            var phenomena = new (System.Func<string>, UnityEngine.Events.UnityAction)[]
-            {
-                (() => Loc.T("아인슈타인 링", "Einstein ring", "アインシュタイン環", "爱因斯坦环"), controls.ToggleEinstein),
-                (() => Loc.T("스파게티화", "Spaghettify", "スパゲッティ化", "面条化"), controls.ToggleSpaghetti),
-                (() => Loc.T("제트", "Jets", "ジェット", "喷流"), controls.ToggleJets),
-                (() => Loc.T("렌즈", "Lens", "レンズ", "透镜"), controls.ToggleLens),
-                (() => Loc.T("광도곡선", "Light curve", "光度曲線", "光变曲线"), controls.ToggleLightCurve),
-                (() => Loc.T("광자 발사", "Fire photons", "光子発射", "发射光子"), controls.FirePhotons),
-            };
-            var display = new (System.Func<string>, UnityEngine.Events.UnityAction)[]
-            {
-                (() => Loc.T("이름표", "Labels", "名札", "标签"), controls.ToggleLabels),
-                (() => Loc.T("물리 패널", "Data panel", "データ", "数据面板"), controls.TogglePanel),
-                (() => Loc.T("수식", "Formulas", "数式", "公式"), controls.ToggleTheory),
-                (() => Loc.T("몰입 보기", "Immersive", "没入", "沉浸"), () => controls.SetImmersive(!controls.Immersive)),
-                (() => Loc.T("소리", "Sound", "音", "声音"), controls.ToggleMute),
-                (() => Loc.T("시점 리셋", "Reset view", "視点リセット", "重置视角"), controls.ResetCamera),
-                (() => Loc.T("🏠 타이틀", "🏠 Title", "🏠 タイトル", "🏠 标题"), () => DesktopControls.LoadScene("TitleScreen")),
-                (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"), () => DesktopControls.LoadScene("MilkyWayShowcase")),
+                new ExhibitBar.Group {
+                    label = () => Loc.T("체험", "Experience", "体験", "体验"),
+                    items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
+                        (() => Loc.T("가이드 투어", "Guided tour", "ガイドツアー", "导览"), controls.ToggleTour),
+                        (() => Loc.T("블랙홀 탄생", "Birth", "誕生", "黑洞诞生"), controls.PlayIntro),
+                        (() => Loc.T("낙하 체험", "Fall in", "落下体験", "坠入体验"), controls.BeginFallIn),
+                        (() => Loc.T("블랙홀 병합", "Merger", "合体", "黑洞合并"), controls.BeginMerger),
+                    }},
+                new ExhibitBar.Group {
+                    label = () => Loc.T("블랙홀", "Black hole", "ブラックホール", "黑洞"),
+                    items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
+                        (() => Loc.T("원반 색상", "Disk colors", "円盤の色", "吸积盘颜色"), controls.CycleColor),
+                        (() => Loc.T("질량", "Mass", "質量", "质量"), controls.CycleMass),
+                        (() => Loc.T("스핀", "Spin", "スピン", "自旋"), controls.CycleSpin),
+                        (() => Loc.T("관측사진", "EHT photo", "観測写真", "观测照片"), controls.CycleComparison),
+                        (() => Loc.T("설명 난이도", "Level", "難易度", "难度"), controls.CycleDifficulty),
+                    }},
+                new ExhibitBar.Group {
+                    label = () => Loc.T("현상", "Phenomena", "現象", "现象"),
+                    items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
+                        (() => Loc.T("아인슈타인 링", "Einstein ring", "アインシュタイン環", "爱因斯坦环"), controls.ToggleEinstein),
+                        (() => Loc.T("스파게티화", "Spaghettify", "スパゲッティ化", "面条化"), controls.ToggleSpaghetti),
+                        (() => Loc.T("제트", "Jets", "ジェット", "喷流"), controls.ToggleJets),
+                        (() => Loc.T("렌즈", "Lens", "レンズ", "透镜"), controls.ToggleLens),
+                        (() => Loc.T("광도곡선", "Light curve", "光度曲線", "光变曲线"), controls.ToggleLightCurve),
+                        (() => Loc.T("광자 발사", "Fire photons", "光子発射", "发射光子"), controls.FirePhotons),
+                    }},
+                new ExhibitBar.Group {
+                    label = () => Loc.T("보기", "View", "表示", "视图"),
+                    items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
+                        (() => Loc.T("이름표", "Labels", "名札", "标签"), controls.ToggleLabels),
+                        (() => Loc.T("물리 패널", "Data panel", "データ", "数据面板"), controls.TogglePanel),
+                        (() => Loc.T("수식", "Formulas", "数式", "公式"), controls.ToggleTheory),
+                        (() => Loc.T("몰입 보기", "Immersive", "没入", "沉浸"), () => controls.SetImmersive(!controls.Immersive)),
+                        (() => Loc.T("소리", "Sound", "音", "声音"), controls.ToggleMute),
+                        (() => Loc.T("시점 리셋", "Reset view", "視点リセット", "重置视角"), controls.ResetCamera),
+                    }},
             };
 
-            BuildRow(canvas.transform, "Toolbar Experiences", experiences, 20f + RowPitch * 3f);
-            BuildRow(canvas.transform, "Toolbar BlackHole", blackHole, 20f + RowPitch * 2f);
-            BuildRow(canvas.transform, "Toolbar Phenomena", phenomena, 20f + RowPitch);
-            BuildRow(canvas.transform, "Toolbar Display", display, 20f);
-        }
+            var (panel, loc) = ExhibitBar.Build(canvas.transform, groups);
+            bar = panel;
+            localized.AddRange(loc);
 
-        void BuildRow(Transform parent, string name,
-            (System.Func<string> text, UnityEngine.Events.UnityAction act)[] items, float y)
-        {
-            float total = items.Length * BtnW + (items.Length - 1) * Gap;
-            float x = -total * 0.5f + BtnW * 0.5f;
-            foreach (var (text, act) in items)
-            {
-                var btn = BlackHoleUI.MakeButton(parent, name + " / " + text(), text(),
-                    new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(x, y),
-                    new Vector2(BtnW, BtnH), act);
-                var label = btn.GetComponentInChildren<Text>();
-                if (label != null) { label.fontSize = 15; localized.Add((label, text)); }
-                rows.Add(btn.gameObject);
-                x += BtnW + Gap;
-            }
+            nav = new GameObject("Scene Navigator").AddComponent<SceneNavigator>();
+            nav.Init(new[] {
+                new SceneNavigator.Dest { scene = "MilkyWayShowcase",
+                    name = () => Loc.T("우리은하", "Milky Way", "天の川銀河", "银河系"), image = "TitleCards/card_galaxy" },
+                new SceneNavigator.Dest { scene = "SolarSystemShowcase",
+                    name = () => Loc.T("태양계", "Solar System", "太陽系", "太阳系"), image = "TitleCards/card_solar" },
+            });
         }
     }
 }
