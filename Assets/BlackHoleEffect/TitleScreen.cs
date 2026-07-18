@@ -108,8 +108,13 @@ namespace BlackHoleEffect
                     new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f),
                     new Vector2(x0 + i * (cardW + gap), -30f), new Vector2(cardW, cardH));
 
+                // MakePanel leaves its Image non-raycastable (panels are usually
+                // just backdrops); the whole card is a click target here, so turn
+                // it back on — without this only the number keys select.
+                var cardImg = card.GetComponent<Image>();
+                cardImg.raycastTarget = true;
                 var btn = card.gameObject.AddComponent<Button>();
-                btn.targetGraphic = card.GetComponent<Image>();
+                btn.targetGraphic = cardImg;
                 var colors = btn.colors;
                 colors.highlightedColor = new Color(1.25f, 1.2f, 1.05f, 1f);
                 colors.pressedColor = new Color(0.8f, 0.8f, 0.8f, 1f);
