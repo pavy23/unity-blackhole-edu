@@ -99,6 +99,25 @@ namespace MilkyWay
             IsPlaying = false;
         }
 
+        /// <summary>The button's job: don't cancel the crossover, finish it now.
+        /// Skips the remaining dive and lands straight in the black-hole
+        /// exhibit — repairing the shared controller assets first (Run does the
+        /// same at its end; leaving them boosted would corrupt the galaxy scene
+        /// the next time it loads), exactly like the natural ending minus the
+        /// choreography.</summary>
+        public void SkipToBlackHole()
+        {
+            if (!IsPlaying) return;
+            if (routine != null) StopCoroutine(routine);
+            NarrationManager.Instance.Stop();
+            DestroySwarm();
+            controller.brightness = savedBrightness;
+            controller.starBrightness = savedStarBrightness;
+            controller.Apply();
+            IsPlaying = false;
+            SceneManager.LoadScene(TargetScene);
+        }
+
         void RestoreAll()
         {
             DestroySwarm();
@@ -327,12 +346,28 @@ namespace MilkyWay
             if (stopButton == null)
             {
                 if (!on) return;
-                stopButton = BlackHoleUI.MakeCinematicButton(GetComponent<Camera>(), "SgrA Stop", Abort);
+                // Not a stop: this crossover exists to reach the black hole, so
+                // the button skips ahead to it rather than cancelling back to
+                // the galaxy (Esc still cancels for anyone who wants out).
+                stopButton = BlackHoleUI.MakeCinematicButton(GetComponent<Camera>(), "SgrA Skip", SkipToBlackHole);
+                // "Skip to the black hole ▶" is far wider than the cinematic
+                // button's default; widen it (and its label) so the pill wraps
+                // the text instead of the text spilling past the edges.
+                var rt = (RectTransform)stopButton.transform;
+                float w = Mathf.Max(rt.sizeDelta.x, 360f);
+                rt.sizeDelta = new Vector2(w, rt.sizeDelta.y);
+                var labelRt = stopButton.GetComponentInChildren<Text>().rectTransform;
+                labelRt.sizeDelta = new Vector2(w - 20f, labelRt.sizeDelta.y);
             }
             stopButton.gameObject.SetActive(on);
+            // The button takes over the top-right corner the language selector
+            // lives in; hide it for the crossover (the shared convention —
+            // LanguageSelect.SetVisible exists for exactly this).
+            LanguageSelect.SetVisible(!on);
             if (on)
                 stopButton.GetComponentInChildren<Text>().text =
-                    Loc.T("중단 ■", "Stop ■", "中止 ■", "停止 ■");
+                    Loc.T("블랙홀로 바로 가기 ▶", "Skip to the black hole ▶",
+                          "ブラックホールへ ▶", "直达黑洞 ▶");
         }
 
         void Caption(string text)
