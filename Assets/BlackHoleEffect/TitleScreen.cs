@@ -139,13 +139,17 @@ namespace BlackHoleEffect
                     pimg.raycastTarget = false;
                     pr.SetSiblingIndex(0);
 
+                    // Darken only the top and bottom (where the title/blurb
+                    // sit); the middle stays clear so the scene shows through.
                     var scrim = new GameObject("Scrim", typeof(RectTransform), typeof(Image));
                     var sr = (RectTransform)scrim.transform;
                     sr.SetParent(card, false);
                     sr.anchorMin = Vector2.zero; sr.anchorMax = Vector2.one;
                     sr.offsetMin = sr.offsetMax = Vector2.zero;
                     var simg = scrim.GetComponent<Image>();
-                    simg.color = new Color(0.03f, 0.04f, 0.07f, 0.5f);
+                    simg.sprite = EdgeGradient;
+                    simg.type = Image.Type.Simple;
+                    simg.color = Color.white;
                     simg.raycastTarget = false;
                     sr.SetSiblingIndex(1);
                     hoverTarget = simg;
@@ -166,14 +170,16 @@ namespace BlackHoleEffect
                     new Vector2(24f, -20f), new Vector2(60f, 30f));
                 num.text = (i + 1).ToString();
 
+                // Title hugs the top, blurb hugs the bottom — the scene photo
+                // shows through the clear middle instead of being covered.
                 var cardTitle = BlackHoleUI.MakeText(card, "Title", 40, BlackHoleUI.TitleGold,
-                    TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2(0f, -110f), new Vector2(cardW - 40f, 56f), FontStyle.Bold);
+                    TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
+                    new Vector2(0f, -44f), new Vector2(cardW - 40f, 52f), FontStyle.Bold);
                 cardTexts[i * 2] = (cardTitle, Cards[i].title);
 
-                var blurb = BlackHoleUI.MakeText(card, "Blurb", 21, BlackHoleUI.TextPrimary,
-                    TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2(0f, -180f), new Vector2(cardW - 60f, 110f));
+                var blurb = BlackHoleUI.MakeText(card, "Blurb", 20, BlackHoleUI.TextPrimary,
+                    TextAnchor.LowerCenter, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f),
+                    new Vector2(0f, 20f), new Vector2(cardW - 50f, 84f));
                 cardTexts[i * 2 + 1] = (blurb, Cards[i].blurb);
             }
 
@@ -225,6 +231,33 @@ namespace BlackHoleEffect
                 if (label != null)
                     label.color = Languages[i].lang == Loc.Language
                         ? BlackHoleUI.TitleGold : BlackHoleUI.TextPrimary;
+            }
+        }
+
+        static Sprite edgeGradient;
+        /// <summary>A vertical scrim: dark at the top and bottom, clear through
+        /// the middle. Darkens the bands the title and blurb sit on without
+        /// veiling the scene photo in the centre.</summary>
+        static Sprite EdgeGradient
+        {
+            get
+            {
+                if (edgeGradient != null) return edgeGradient;
+                const int h = 128;
+                var tex = new Texture2D(4, h, TextureFormat.RGBA32, false)
+                    { wrapMode = TextureWrapMode.Clamp };
+                for (int y = 0; y < h; y++)
+                {
+                    float v = y / (h - 1f);            // 0 bottom .. 1 top
+                    float topBand = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.72f, 1f, v));
+                    float botBand = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(0.30f, 0f, v));
+                    float a = Mathf.Max(topBand, botBand) * 0.72f;
+                    var c = new Color(0.02f, 0.03f, 0.06f, a);
+                    for (int x = 0; x < 4; x++) tex.SetPixel(x, y, c);
+                }
+                tex.Apply();
+                edgeGradient = Sprite.Create(tex, new Rect(0, 0, 4, h), new Vector2(0.5f, 0.5f));
+                return edgeGradient;
             }
         }
     }
