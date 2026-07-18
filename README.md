@@ -1,14 +1,44 @@
-# BlackHoleEdu
+# CosmosEdu
 
-A real-time, general-relativity-based black hole educational simulation built with **Unity 6 + URP**.
+A real-time cosmos exhibit built with **Unity 6 + URP** — three connected, fully narrated
+educational simulations: a general-relativity black hole, the Milky Way, and the solar system,
+each with a desktop showcase and a Quest passthrough (MR) edition.
+
+*Formerly **BlackHoleEdu** — the project outgrew its first name.*
 
 *[한국어 README](README.ko.md)*
 
-Everything you see in the image — the shadow, the photon ring, the lensed arcs — comes from
-**numerically integrating the geodesic equation per pixel** in a fragment shader. Brightness and
-color come from relativistic shifts: Doppler beaming, gravitational redshift, and blackbody radiation.
+## The exhibit at a glance
 
-## Features
+A title screen (build index 0) lets visitors pick a language and an experience; every scene has a
+way back to it (**F10** on desktop, a menu button in MR).
+
+| Exhibit | Desktop scene | MR scene |
+|---|---|---|
+| Title / picker | `TitleScreen` | — |
+| Black hole | `BlackHoleShowcase` | `BlackHoleMR` |
+| Milky Way | `MilkyWayShowcase` | `MilkyWayMR` |
+| Solar system | `SolarSystemShowcase` | `SolarSystemMR` |
+
+The exhibits link to each other in-fiction as well: the black hole scene is Sagittarius A*, the
+galaxy scene can dive into its core and land back at the black hole (F9), and the solar-system
+tour ends by returning to the galaxy.
+
+- **Four languages** — Korean · English · Japanese · Chinese: every caption, panel, label and
+  narration clip (neural TTS per language); switch any time (K, or the on-screen selector)
+- **Almost fully procedural** — skyboxes, the galaxy, star surfaces, soundscapes and
+  gravitational-wave chirp audio are generated in code; the few external assets are observed
+  planet/moon texture maps and a bundled pan-CJK font
+- **Runs on PC (primary), Quest passthrough, and WebGL** (all shaders `target 3.5`; post-processing
+  is disabled on web — a known URP/WebGL FSR limitation)
+
+---
+
+## 1 · Black hole (`BlackHoleShowcase` / `BlackHoleMR`)
+
+Everything you see — the shadow, the photon ring, the lensed arcs — comes from **numerically
+integrating the geodesic equation per pixel** in a fragment shader. Brightness and color come from
+relativistic shifts: Doppler beaming, gravitational redshift, and blackbody radiation.
 
 - **Schwarzschild raymarching** — null geodesics integrated with a leapfrog scheme on a single
   billboard quad; thin accretion disk + volumetric haze, relativistic beaming *I ∝ (δ·g)³*,
@@ -19,7 +49,7 @@ color come from relativistic shifts: Doppler beaming, gravitational redshift, an
   black holes lensing the starfield** as they inspiral on a Peters-equation orbit — gas-free, as
   GW150914 itself was — with gravitational-wave chirp audio synced to the actual orbital frequency,
   merger flash, quadrupole-deformed wavefronts, ringdown, and a Kerr remnant with 95% of the total
-  mass and spin a ≈ 0.69 (a disk settles back around the remnant afterwards)
+  mass and spin a ≈ 0.69
 - **Experiences** — 11-step narrated guided tour (F1), star-collapse birth intro (F2), fully narrated
   first-person fall-in with a physically honest inside-the-horizon ending (F3)
 - **Educational toggles** — photon trajectory launcher (Space), Einstein ring (E), spaghettification
@@ -27,24 +57,57 @@ color come from relativistic shifts: Doppler beaming, gravitational redshift, an
   (4); every toggle shows a card explaining what you are looking at
 - **Theory panel** — context-sensitive governing-equation cards (X; auto-shown at the advanced
   difficulty level, C)
-- **Four languages** — Korean · English · Japanese · Chinese: every caption, panel, label and
-  narration clip (neural TTS per language); switch any time from the top-right selector or K
-- **Fully procedural assets** — starfield/Milky-Way skybox, star surface shader (convection
-  granulation + corona), ambient soundscape and GW chirp are all generated in code; zero external
-  art or audio assets
-- **MR scene** — Quest passthrough (`BlackHoleMR`): room-scale hole you can grab and scale,
-  throwable spectral-type star-balls, binary-merger haptics, palm-summoned mini black hole
-
-## Controls (BlackHoleShowcase scene)
+- **MR edition** — room-scale hole you can grab and scale, throwable spectral-type star-balls,
+  binary-merger haptics (the room swaps for open space so the bare holes have stars to lens),
+  palm-summoned mini black hole
 
 | Category | Keys |
 |---|---|
-| Experiences | **F1** guided tour (N/B to navigate) · **F2** birth of a black hole · **F3** fall in · **F4** merger · **Esc** skip/stop |
+| Experiences | **F1** guided tour (N/B) · **F2** birth · **F3** fall in · **F4** merger · **F9** to the Milky Way · **Esc** skip/stop |
 | Black hole | **1** disk colors · **2** mass presets · **3** spin · **4** EHT photo comparison |
-| Phenomena | **Space** photons fire/clear · **E** Einstein ring (A/D) · **T** spaghettification · **J** jets · **G** lens magnifier · **V** light curve |
-| Controls | RMB drag orbit · wheel/W/S zoom · **R** reset · **L** labels · **I** info panel · **X** theory · **U** immersive · **M** sound · **K** language · **P** perf HUD · **F12** snapshot · **H** help · **C** explanation level |
+| Phenomena | **Space** photons · **E** Einstein ring (A/D) · **T** spaghettification · **J** jets · **G** lens magnifier · **V** light curve |
+| System | RMB orbit · wheel/W/S zoom · **R** reset · **L** labels · **I** info · **X** theory · **U** immersive · **M** sound · **K** language · **P** perf · **F10** title · **F12** snapshot · **H** help · **C** level |
 
-## The physics actually implemented
+## 2 · Milky Way (`MilkyWayShowcase` / `MilkyWayMR`)
+
+A hybrid galaxy: a **raymarched volumetric model** (bar, spiral arms as density waves, dust
+extinction, HII regions, warm bulge) plus a **baked starfield of ~480k point stars** the dust
+genuinely attenuates. Nine narrated experiences:
+
+- **F1 zoom journey** — from the solar system out to the full galaxy, with a "you are here" ring
+- **F2 night sky** — lift off from a hillside at night and watch the Milky Way band become the disk
+  seen edge-on from inside
+- **F3 Andromeda encounter** — framed with the 2025 result (a coin-flip probability of merging, not
+  the old certainty); viewed from beside M31 looking home, tidal tails, Milkomeda, then time rewinds
+- **F4 galaxy tour** — seven-stop anatomy lesson (bulge & bar, density-wave arms, dust lanes,
+  stellar nurseries, the Sun's orbit, halo & dark matter)
+- **F5 cosmic zoom-out** — Local Group → cosmic web (52k impostor galaxies along filaments)
+- **F6 solar-system tour** · **F7 rotation-curve lab** (the dark-matter evidence, interactive) ·
+  **F8 galaxy zoo** (the Hubble sequence as volumetric specimens)
+- **F9 Sagittarius A\* crossover** — dive into the core through the S-star swarm and land in the
+  black-hole exhibit
+- **MR edition** — the galaxy as a ~1.1 m miniature you can grab, spin and two-hand scale, tipped
+  toward the viewer so the spiral face reads; feature name tags, a pulsing gold sun ring, and the
+  guided tour re-pointed with a highlight ring instead of a camera
+
+## 3 · Solar system (`SolarSystemShowcase` / `SolarSystemMR`)
+
+A detailed orrery using **observed texture maps** (planets, the Moon, Saturn's ring strip), real
+axial tilts and retrograde spins, comet-tail orbit lines tinted per planet, and calibrated motion:
+spins and atmosphere flows run on an honest shared clock (1 real hour ≈ 1.5 s), while orbits use a
+legibility clock (Kepler ratios preserved).
+
+- **Click any planet** to frame it; **F1 planet tour** — nine narrated stops with NASA fact strips
+- **F2 the true scale** — the "friendly map" confesses: orbits go linear in AU, bodies shrink to
+  real proportions, and the solar system reveals itself as almost perfectly empty space
+- **Atmosphere dynamics** — Jupiter's belts shear and the Great Red Spot churns (bounded two-phase
+  flow maps over the photo maps), Venus superrotation, ice-giant winds, drifting Earth clouds —
+  all speeds derived from real wind data on the exhibit clock
+- **MR edition** — a room-scale orrery (Neptune's orbit ≈ 1.2 m) you can grab and rescale; the
+  true-scale lesson re-authored for a fixed viewer: the rig itself shrinks so Neptune's orbit stays
+  put while the planets vanish into grains
+
+## The physics actually implemented (black hole)
 
 The geometry on screen is the numerical solution of the real equations — not an artist's
 impression with lensing "painted on":
@@ -60,31 +123,33 @@ impression with lensing "painted on":
 | Binary inspiral | Peters decay a(t) = a_f + (a₀−a_f)(1−t/T)^¼, Kepler ω² = M/a³, f_GW = 2f_orb | remnant mass 0.95 M_tot and spin a = 0.69 are the measured GW150914 values |
 | Photon launcher | the same geodesic ODE on the CPU | capture inside b_crit is genuine, not scripted |
 
+And honest numbers elsewhere: the galaxy's proportions (disk radius ~16 kpc, Sun at 8.2 kpc, bar at
+~27°), the rotation-curve lab's flat curve vs. the Keplerian prediction, the solar system's fact
+strips, tilts, retrograde spins, and the 2025 Andromeda probability are all the real values.
+
 ## Simplifications and artistic license
 
 Being honest about what is *not* rigorous:
 
-- **Time and space are compressed.** The merger squeezes months of inspiral into ~40 s (Kepler
-  scaling preserved); disk rotation is sped up (a real SMBH disk takes minutes–hours per orbit and
-  would look frozen); mass presets change the numbers correctly but the visual scale ratios are
-  stylized so everything stays on screen.
+- **Time and space are compressed everywhere.** The merger squeezes months of inspiral into ~40 s
+  (Kepler scaling preserved); disk and planet orbits are sped up on legibility clocks; the Andromeda
+  encounter compresses ~10 Gyr; mass presets change the numbers correctly but visual scale ratios
+  are stylized so everything stays on screen.
 - **Binary lensing is a superposition** of two Schwarzschild deflections. No analytic two-black-hole
-  metric exists; the last orbits really require numerical relativity. The merger is shown **gas-free**
-  — two bare black holes lensing the starfield — matching GW150914, which had no electromagnetic
-  counterpart; the exploration disk disperses at the start and settles back around the remnant. (A
-  gas-rich circumbinary-disk + cavity + per-hole-minidisk path also exists in the shader but is not
-  used in this cinematic.) Ringdown audio is a damped sine, not the quasi-normal-mode spectrum. GW
-  "rings" visualize invisible strain.
-- **No radiative transfer.** Disk brightness/opacity profiles, turbulence noise and the bright
-  "knots" are procedural art shaped by the physics (Keplerian shear), not MHD simulation output.
-  Bloom and exposure are tuned for legibility.
-- **The fall-in is a cinematic**, not a proper-time integration: pacing, camera tilts and the
-  shrinking-sky circle after the horizon are staged (the *statements* in the captions — light cone
-  tilting, last light overhead, the backward sky remaining visible — are correct physics).
-- **Spaghettification** uses a capped (r₀/r)^1.4 stretch for readability; the real tidal gradient is
-  Δa ∝ 1/r³. Supernova, jets and the intro are physically-motivated VFX, not simulations.
-- **Kerr mode** shows the prograde equatorial thin disk only; jets are decorative and not tied to
-  spin (no Blandford–Znajek), and the disk does not warp (no Bardeen–Petterson).
+  metric exists; the last orbits really require numerical relativity. Ringdown audio is a damped
+  sine, not the quasi-normal-mode spectrum. GW "rings" visualize invisible strain.
+- **No radiative transfer.** Disk brightness, the galaxy's emission/extinction model, turbulence
+  noise and the bright "knots" are procedural art shaped by the physics, not MHD or RT simulation
+  output. Bloom and exposure are tuned for legibility.
+- **The fall-in and other cinematics are staged**, not proper-time integrations (the *statements*
+  in the captions are correct physics).
+- **Spaghettification** uses a capped stretch for readability (the real tidal gradient is
+  Δa ∝ 1/r³); supernova, jets and the intro are physically-motivated VFX.
+- **The galaxy encounter is a choreographed morph**, not an N-body run; tidal tails and phase-mixing
+  are shader deformations shaped by the real timeline.
+- **Planet atmosphere motion** advects photographs with flow maps at real wind speeds — the pattern
+  motion is real-rate, the fluid dynamics are not simulated.
+- Kerr mode shows the prograde equatorial thin disk only; jets are decorative (no Blandford–Znajek).
 - MR star-ball orbits are Newtonian with a room-scale GM.
 
 Each in-app theory card (X) states whether its topic is computed or stylized.
@@ -92,24 +157,25 @@ Each in-app theory card (X) states whether its topic is computed or stylized.
 ## Notes for classroom use
 
 - **Trust the numbers, not the stopwatch.** Panel values (Rs, shadow size, temperatures, dilation
-  factors) are correct; on-screen durations and angular sizes are compressed. A real Sgr A* shadow
-  spans ~50 μas — no camera could hover at 26 Rs.
+  factors, planetary data) are correct; on-screen durations and angular sizes are compressed.
 - **The dilation clocks assume *hovering* (static) observers.** Orbiting or falling observers need
-  extra velocity terms — that is why the probe is described as "hovering beside the hole". Near the
-  hole *both* clocks slow, so the panel switches to a far-away reference hour to keep the comparison
-  intuitive.
+  extra velocity terms — that is why the probe is described as "hovering beside the hole".
 - **Colors are physical hues, but real images differ:** EHT pictures are radio interferometry in
   false color; an optical view would be blindingly bright. Use the comparison mode (4) to discuss
   this explicitly.
 - **Inside-horizon content is an educated illustration.** Nothing can report back from inside; the
   captions say as much and that claim *is* the physics.
+- **The Andromeda story teaches uncertainty**: the 2025 reanalysis turned a "certain collision"
+  into a coin flip — a good example of science updating itself.
 - The narration scripts are the on-screen captions (all four languages) — safe to quote; regenerate
   audio with edge-tts if you edit them.
 
 ## Requirements
 
-- **Unity 6000.5.3f1** (Unity 6, URP 17); the XR packages are only needed for the MR scene
-- Narration audio ships in `Assets/BlackHoleEffect/Resources/Narration/` (regenerate with
-  [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `Lines` arrays)
+- **Unity 6000.5.3f1** (Unity 6, URP 17); the XR packages are only needed for the MR scenes
+- Narration audio ships in `Assets/*/Resources/Narration/` (regenerate with
+  [edge-tts](https://github.com/rany2/edge-tts); transcripts live in each script's `NarrationLines`
+  arrays — subtitle == voice is the exhibit-wide convention)
+- WebGL builds are gzip-compressed; serve with `python Builds/serve_webgl.py` locally
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
