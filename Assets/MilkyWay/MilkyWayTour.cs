@@ -122,6 +122,15 @@ namespace MilkyWay
                 titleJa = "6. ハローと暗黒物質", titleZh = "6. 银晕与暗物质" },
         };
 
+        // ---- data accessors for the MR edition (shares titles and narration;
+        // points with a highlight ring instead of flying the camera) ---------
+        public static int StepCount => Steps.Length;
+        public static string StepTitle(int i)
+        {
+            var s = Steps[i];
+            return Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
+        }
+
         public void StartTour()
         {
             if (Running) return;

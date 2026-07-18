@@ -75,6 +75,7 @@ namespace MilkyWay
         readonly List<Material> mats = new();
         readonly List<LineRenderer> orbitLines = new();
         readonly Dictionary<string, Transform> bodies = new();
+        readonly Dictionary<string, Transform> visuals = new();
         readonly List<PlanetRec> planetRecs = new();
         readonly List<GameObject> moonPivots = new();
         Transform sunT;
@@ -94,6 +95,7 @@ namespace MilkyWay
         public void SetRealism(float t)
         {
             t = Mathf.Clamp01(t);
+            appliedRealism = t;
             foreach (var rec in planetRecs)
             {
                 float displayOrbit = earthOrbit * Mathf.Sqrt(rec.au);
@@ -150,6 +152,12 @@ namespace MilkyWay
         /// "Jupiter", "Io"… Returns null if unknown.</summary>
         public Transform GetBody(string name) =>
             bodies.TryGetValue(name, out var t) ? t : null;
+
+        /// <summary>The visible sphere itself (unit-radius mesh, so its
+        /// lossyScale.x IS the world radius) — what MR labels and highlight
+        /// rings need, where <see cref="GetBody"/> returns the orbit pivot.</summary>
+        public Transform GetBodyVisual(string name) =>
+            visuals.TryGetValue(name, out var t) ? t : null;
 
         public static SolarSystemRig Spawn(Vector3 position, Transform parent = null)
         {
@@ -346,6 +354,7 @@ namespace MilkyWay
                 };
                 orbiters.Add(orbiter);
                 bodies[def.name] = pivot;
+                visuals[def.name] = sphere;
 
                 Transform ring = null;
                 if (def.name == "Saturn") ring = BuildRings(tiltNode, size, mat);
@@ -500,6 +509,7 @@ namespace MilkyWay
                 mats.Add(m);
             }
             bodies["Sun"] = sun.transform;
+            visuals["Sun"] = sun.transform;
             sunT = sun.transform;
         }
 
@@ -622,6 +632,9 @@ namespace MilkyWay
         // ------------------------------------------------------------------
 
         bool lineWidthSynced;
+        float appliedRealism;
+        Vector3 lastRootPos, lastRootScale;
+        static readonly int SunPosId = Shader.PropertyToID("_SunPos");
 
         void Update()
         {
@@ -631,6 +644,23 @@ namespace MilkyWay
             {
                 lineWidthSynced = true;
                 SetRealism(0f);
+                lastRootPos = transform.position;
+                lastRootScale = transform.lossyScale;
+            }
+
+            // MR makes the rig grabbable: moving it invalidates the _SunPos
+            // baked into every material at build time (planet lighting would
+            // keep pointing at the empty spot the sun used to occupy), and
+            // rescaling invalidates the hand-scaled world-unit line widths.
+            if (transform.position != lastRootPos || transform.lossyScale != lastRootScale)
+            {
+                bool rescaled = transform.lossyScale != lastRootScale;
+                lastRootPos = transform.position;
+                lastRootScale = transform.lossyScale;
+                foreach (var m in mats)
+                    if (m != null && m.HasProperty(SunPosId))
+                        m.SetVector(SunPosId, transform.position);
+                if (rescaled) SetRealism(appliedRealism);
             }
 
             float dt = Time.deltaTime * motionScale;

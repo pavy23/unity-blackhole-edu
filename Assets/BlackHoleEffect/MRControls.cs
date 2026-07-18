@@ -90,9 +90,24 @@ namespace BlackHoleEffect
                 (() => Loc.T("수식", "Formulas", "数式", "公式"), ToggleTheory),
             };
 
-            BuildRow(canvas.transform, "MR Menu Experiences", experiences, 26f + RowPitch * 2f);
-            BuildRow(canvas.transform, "MR Menu BlackHole", blackHole, 26f + RowPitch);
-            BuildRow(canvas.transform, "MR Menu Phenomena", phenomena, 26f);
+            // The other MR exhibits, one hop away — same scene-name pattern
+            // as the desktop F9/F11 keys.
+            var scenes = new (System.Func<string> text, UnityEngine.Events.UnityAction act)[]
+            {
+                (() => Loc.T("은하 전시", "Milky Way", "銀河展示", "银河展区"), () => LoadScene("MilkyWayMR")),
+                (() => Loc.T("태양계 전시", "Solar system", "太陽系展示", "太阳系展区"), () => LoadScene("SolarSystemMR")),
+            };
+
+            BuildRow(canvas.transform, "MR Menu Experiences", experiences, 26f + RowPitch * 3f);
+            BuildRow(canvas.transform, "MR Menu BlackHole", blackHole, 26f + RowPitch * 2f);
+            BuildRow(canvas.transform, "MR Menu Phenomena", phenomena, 26f + RowPitch);
+            BuildRow(canvas.transform, "MR Menu Scenes", scenes, 26f);
+        }
+
+        void LoadScene(string scene)
+        {
+            if (controls == null || controls.CinematicBusy) return;
+            UnityEngine.SceneManagement.SceneManager.LoadScene(scene);
         }
 
         void BuildRow(Transform parent, string name,

@@ -223,6 +223,18 @@ namespace MilkyWay
             ApplyStep();
         }
 
+        // ---- data accessors for the MR edition (shares stops, facts and
+        // narration; authors its own pointing instead of camera motion) ------
+        public static int StopCount => Stops.Length;
+        public static string StopBody(int i) => Stops[i].body;
+        public static string StopTitle(int i)
+        {
+            var s = Stops[i];
+            return Loc.T(s.title, s.titleEn, s.titleJa, s.titleZh);
+        }
+        public static string FactLine(int i)
+            => Loc.T(Facts[i], FactsEn[i], FactsJa[i], FactsZh[i]);
+
         /// <summary>Index of the stop that frames this body, or -1.</summary>
         public static int StopIndexOf(string body)
         {
