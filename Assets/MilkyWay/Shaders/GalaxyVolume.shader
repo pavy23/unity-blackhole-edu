@@ -46,7 +46,10 @@ Shader "MilkyWay/GalaxyVolume"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma target 4.5
+            // 3.5, not 4.5: WebGL2 is GLES3.0 — target 4.5 silently drops the
+            // shader from web builds (the whole galaxy vanishes). Nothing here
+            // needs SM4.5.
+            #pragma target 3.5
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
             CBUFFER_START(UnityPerMaterial)

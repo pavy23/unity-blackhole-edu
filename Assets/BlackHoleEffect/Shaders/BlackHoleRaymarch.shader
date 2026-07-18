@@ -71,7 +71,10 @@ Shader "BlackHole/RaymarchedBlackHole"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #pragma target 4.5
+            // 3.5, not 4.5: WebGL2 is GLES3.0 — target 4.5 silently drops the
+            // shader from web builds and the black hole ships as a pink cube.
+            // Nothing here needs SM4.5 (no compute, no structured buffers).
+            #pragma target 3.5
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "StarFunctions.hlsl"
 
