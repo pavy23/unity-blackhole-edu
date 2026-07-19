@@ -181,15 +181,22 @@ Shader "MilkyWay/NebulaVolume"
                     // front), red SII/Hα crossed with teal OIII, over a faint blue
                     // synchrotron haze from the core (the Crab's pulsar wind). Sharp
                     // ridged noise, not smooth cloud — it reads as shredded gas.
-                    float web = neb_ridged(qw * 2.3 + 8.0);
-                    float shellish = smoothstep(1.0, 0.1, r) * (0.3 + 0.7 * d);
-                    float fil = pow(web, 2.6) * shellish;
-                    float3 filColor = lerp(_Color1.rgb, _Color2.rgb, saturate(web * 1.4));
-                    emission = filColor * fil * _Brightness * 3.5;
-                    // A faint, TIGHT blue synchrotron glow at the very core, not a
-                    // haze that fills the shell.
-                    emission += float3(0.5, 0.7, 1.0) * exp(-r * r * 9.0) * 0.12 * _Brightness;
-                    absorb = fil * _DustStrength * 0.35;
+                    // The Crab's real structure: an ORANGE hydrogen filament CAGE
+                    // on the outer shell, a BLUE synchrotron glow (the pulsar wind)
+                    // filling the interior.
+                    float web = neb_ridged(qw * 2.4 + 8.0);
+                    float cage = smoothstep(0.2, 0.62, r) * smoothstep(1.05, 0.82, r);
+                    // Sparse, high-contrast filaments: only the brightest ridges
+                    // survive, so dark gaps open up between them (the Crab's lace).
+                    float fil = pow(web, 3.6) * cage * (0.5 + 0.5 * d);
+                    float3 orange = _Color1.rgb;                        // hydrogen orange
+                    float3 teal = _Color2.rgb;                          // OIII flecks
+                    float3 filColor = lerp(orange, teal, saturate((web - 0.7) * 2.6));
+                    emission = filColor * fil * _Brightness * 5.0;
+                    // Blue synchrotron interior, textured, fading out before the cage.
+                    float synch = smoothstep(0.68, 0.0, r) * (0.35 + 0.5 * neb_fbm(qw * 1.3));
+                    emission += float3(0.4, 0.62, 1.05) * synch * 0.5 * _Brightness;
+                    absorb = fil * _DustStrength * 0.3;
                 }
                 else
                 {
