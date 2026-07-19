@@ -185,7 +185,9 @@ namespace MilkyWay
             m.SetFloat("_DustStrength", h.dust);
             m.SetFloat("_ShellRadius", h.shellRadius <= 0f ? 0.6f : h.shellRadius);
             m.SetFloat("_ShellThickness", h.shellThickness <= 0f ? 0.1f : h.shellThickness);
-            m.SetFloat("_Steps", 90f);
+            // 72 steps: the galaxy volume runs at 64, and only one nebula renders
+            // at a time now, so this is comfortably enough for a clean march.
+            m.SetFloat("_Steps", 72f);
         }
     }
 }

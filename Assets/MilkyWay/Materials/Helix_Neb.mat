@@ -34,7 +34,7 @@ Material:
     - _Radius: 6.5
     - _ShellRadius: 0.55
     - _ShellThickness: 0.2
-    - _Steps: 90
+    - _Steps: 72
     - _Threshold: 0.3
     m_Colors:
     - _Color1: {r: 2, g: 0.55, b: 0.6, a: 1}
