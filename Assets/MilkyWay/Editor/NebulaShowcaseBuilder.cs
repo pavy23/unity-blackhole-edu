@@ -76,6 +76,11 @@ namespace MilkyWay.Editor
             gallery.controller = controller;
             gallery.orbit = orbit;
 
+            var lifeTour = camGO.AddComponent<NebulaTour>();
+            lifeTour.controller = controller;
+            lifeTour.gallery = gallery;
+            gallery.tour = lifeTour;
+
             camGO.AddComponent<MilkyWayAudio>();
 
             SetupPost();

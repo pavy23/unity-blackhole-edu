@@ -15,8 +15,11 @@ namespace MilkyWay
     {
         public NebulaController controller;
         public BlackHoleEffect.CinematicOrbit orbit;
+        public NebulaTour tour;
         public float glideDuration = 2.4f;
 
+        bool tourActive;
+        GameObject startBtn;
         int index = -1;
         float glideT = 1f;
         Vector3 fromPos, toPos, fromLook, toLook, curLook;
@@ -46,8 +49,27 @@ namespace MilkyWay
             }
             LanguageSelect.CreateWidget();
             BuildNav();
+            BuildStartButton();
             Loc.Changed -= Refresh; Loc.Changed += Refresh;
             Frame(0, instant: true);
+        }
+
+        Text startBtnLabel;
+        void BuildStartButton()
+        {
+            if (tour == null) return;
+            var canvas = BlackHoleUI.EnsureCanvas(GetComponent<Camera>() ?? Camera.main);
+            var btn = BlackHoleUI.MakeButton(canvas.transform, "Life Tour Start", "",
+                new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(200f, -26f), new Vector2(300f, 40f),
+                () => tour.StartTour());
+            startBtn = btn.gameObject;
+            startBtnLabel = btn.GetComponentInChildren<Text>();
+            if (startBtnLabel != null)
+            {
+                startBtnLabel.color = BlackHoleUI.TitleGold;
+                startBtnLabel.text = Loc.T("▶  별의 일생 투어", "▶  The Life of a Star",
+                                           "▶  星の一生ツアー", "▶  恒星的一生");
+            }
         }
 
         BgCfg Cfg(int i)
@@ -89,6 +111,19 @@ namespace MilkyWay
 
         public void Next() { if (controller != null) Frame((index + 1) % controller.Count); }
         public void Prev() { if (controller != null) Frame((index - 1 + controller.Count) % controller.Count); }
+
+        /// <summary>Glide to a specimen — the narrated tour drives the gallery
+        /// through this, reusing all the framing / one-at-a-time / sky logic.</summary>
+        public void ShowSpecimen(int i) { if (controller != null) Frame(i); }
+
+        /// <summary>Tour takes over: hide the browse card and the start button and
+        /// stop reading the arrow keys; the tour drives instead.</summary>
+        public void SetTourActive(bool on)
+        {
+            tourActive = on;
+            if (card != null) card.gameObject.SetActive(!on);
+            if (startBtn != null) startBtn.SetActive(!on);
+        }
 
         void Frame(int i, bool instant = false)
         {
@@ -145,6 +180,7 @@ namespace MilkyWay
             // Crossfade the background in step with the camera glide.
             ApplyBg(bgFrom, bgTo, Mathf.SmoothStep(0f, 1f, glideT));
 
+            if (tourActive) return;   // the tour owns navigation while it runs
 #if ENABLE_INPUT_SYSTEM
             var kb = UnityEngine.InputSystem.Keyboard.current;
             if (kb != null)
@@ -160,6 +196,9 @@ namespace MilkyWay
 
         void Refresh()
         {
+            if (startBtnLabel != null)
+                startBtnLabel.text = Loc.T("▶  별의 일생 투어", "▶  The Life of a Star",
+                                           "▶  星の一生ツアー", "▶  恒星的一生");
             if (card == null || index < 0) return;
             var h = controller.Hero(index);
             cardTitle.text = h.name();
