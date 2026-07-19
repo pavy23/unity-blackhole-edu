@@ -27,6 +27,7 @@ namespace MilkyWay
             public float brightness, radius, density, noiseScale, filament, threshold, dust;
             public float shellRadius, shellThickness;
             public bool backdrop;   // dark nebula: spawn a red emission cloud behind
+            public Vector3 stretch; // non-uniform volume scale (zero => uniform)
 
             // --- embedded stars ---
             public Color starBright, starField;
@@ -83,10 +84,10 @@ namespace MilkyWay
             new Hero {
                 id = "Pleiades", form = Form.Nebula, position = new Vector3(-40, -3, 14), framing = 3.4f,
                 type = 1, color1 = new Color(0.5f, 0.8f, 2.3f), color2 = new Color(0.6f, 0.8f, 1.6f),
-                brightness = 2.0f, radius = 7f, density = 0.9f, noiseScale = 0.40f, filament = 1.2f,
-                threshold = 0.5f, dust = 0.8f,
+                brightness = 2.6f, radius = 7f, density = 0.5f, noiseScale = 0.40f, filament = 1.5f,
+                threshold = 0.6f, dust = 0.8f,
                 starBright = new Color(0.8f, 0.95f, 1.5f), starField = new Color(0.85f, 0.95f, 1.3f),
-                brightN = 8, fieldN = 45, coreFrac = 0.55f,
+                brightN = 10, fieldN = 40, coreFrac = 0.6f,
                 name = () => Loc.T("플레이아데스 (M45)", "The Pleiades (M45)", "プレアデス星団 (M45)", "昴星团 (M45)"),
                 facts = () => Loc.T("반사성운 + 산개성단 · 444광년 · 1억 살 · 별 약 1,000개",
                                     "Reflection nebula + open cluster · 444 ly · 100 Myr · ~1,000 stars",
@@ -100,9 +101,9 @@ namespace MilkyWay
             // 4) Ring Nebula — planetary
             new Hero {
                 id = "Ring", form = Form.Nebula, position = new Vector3(26, -22, 30), framing = 3.6f,
-                type = 2, color1 = new Color(2.1f, 0.55f, 0.45f), color2 = new Color(0.35f, 1.7f, 1.2f),
-                brightness = 0.5f, radius = 5f, density = 0.9f, noiseScale = 0.7f, filament = 0.8f,
-                threshold = 0.3f, dust = 0.6f, shellRadius = 0.6f, shellThickness = 0.05f,
+                type = 2, color1 = new Color(2.1f, 0.5f, 0.5f), color2 = new Color(0.3f, 1.7f, 1.35f),
+                brightness = 1.0f, radius = 5f, density = 0.9f, noiseScale = 0.7f, filament = 0.8f,
+                threshold = 0.3f, dust = 0.6f, shellRadius = 0.6f, shellThickness = 0.15f,
                 starBright = new Color(0.9f, 0.95f, 1.1f), starField = new Color(0.9f, 0.9f, 1.0f),
                 brightN = 0, fieldN = 22, coreFrac = 1.6f,
                 name = () => Loc.T("고리 성운 (M57)", "The Ring Nebula (M57)", "環状星雲 (M57)", "环状星云 (M57)"),
@@ -119,8 +120,8 @@ namespace MilkyWay
             new Hero {
                 id = "Crab", form = Form.Nebula, position = new Vector3(-22, 18, 34), framing = 3.4f,
                 type = 3, color1 = new Color(2.3f, 0.95f, 0.35f), color2 = new Color(0.4f, 1.6f, 1.0f),
-                brightness = 0.4f, radius = 7f, density = 1.2f, noiseScale = 0.5f, filament = 1.5f,
-                threshold = 0.35f, dust = 0.5f,
+                brightness = 0.42f, radius = 7f, density = 1.2f, noiseScale = 0.5f, filament = 1.5f,
+                threshold = 0.35f, dust = 0.5f, stretch = new Vector3(1.35f, 0.82f, 1.0f),
                 starBright = new Color(0.7f, 0.85f, 1.3f), starField = new Color(1.1f, 1.0f, 0.95f),
                 brightN = 1, fieldN = 40, coreFrac = 0.06f,
                 name = () => Loc.T("게 성운 (M1)", "The Crab Nebula (M1)", "かに星雲 (M1)", "蟹状星云 (M1)"),

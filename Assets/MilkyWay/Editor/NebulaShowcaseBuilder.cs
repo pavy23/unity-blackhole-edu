@@ -101,17 +101,22 @@ namespace MilkyWay.Editor
                 backHero.type = 0; // emission
                 backHero.color1 = new Color(2.3f, 0.45f, 0.55f);
                 backHero.color2 = new Color(0.5f, 1.2f, 1.0f);
-                backHero.brightness = 1.5f; backHero.radius = h.radius * 1.15f; backHero.density = 0.9f;
-                backHero.noiseScale = 0.24f; backHero.filament = 1.6f; backHero.threshold = 0.48f;
-                backHero.dust = 1.2f;
+                backHero.brightness = 1.9f; backHero.radius = h.radius * 1.5f; backHero.density = 0.85f;
+                backHero.noiseScale = 0.2f; backHero.filament = 1.5f; backHero.threshold = 0.5f;
+                backHero.dust = 1.0f; backHero.stretch = Vector3.zero;
                 NebulaLibrary.ApplyMaterial(bgMat, backHero);
                 var bg = MakeVolume(root.transform, "Backdrop", bgMat);
-                bg.transform.localPosition = new Vector3(1.5f, -0.5f, h.radius * 1.05f);
+                // A broad bright emission WALL centred behind and slightly above, so
+                // the dust bank silhouettes against it (dark below, red glow above).
+                bg.transform.localPosition = new Vector3(0f, 1.6f, h.radius * 1.15f);
             }
 
             var mat = SaveMaterial(h.id + "_Neb", nebShader);
             NebulaLibrary.ApplyMaterial(mat, h);
-            MakeVolume(root.transform, "Volume", mat);
+            var vol = MakeVolume(root.transform, "Volume", mat);
+            // Non-uniform scale (e.g. the Crab's oval) lives on the volume only, so
+            // the sibling star field stays undistorted.
+            if (h.stretch != Vector3.zero) vol.transform.localScale = h.stretch;
 
             if (h.fieldN > 0 || h.brightN > 0)
             {
@@ -141,7 +146,9 @@ namespace MilkyWay.Editor
             NebulaLibrary.Hero h, Shader starShader)
         {
             var starMat = SaveMaterial(h.id + "_Stars", starShader);
-            starMat.SetFloat("_StarBrightness", 1.4f);
+            // Lower brightness for globulars so the warm giant colours read instead
+            // of clipping to white through bloom; open clusters can stay punchy.
+            starMat.SetFloat("_StarBrightness", h.clusterKind == ClusterField.Kind.Globular ? 1.05f : 1.4f);
             starMat.SetFloat("_SizeScale", 1.6f);
             starMat.SetFloat("_NearFade", 0.05f);
 

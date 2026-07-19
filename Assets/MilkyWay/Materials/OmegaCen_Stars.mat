@@ -28,7 +28,7 @@ Material:
     - _NearFade: 0.05
     - _Scramble: 0
     - _SizeScale: 1.6
-    - _StarBrightness: 1.4
+    - _StarBrightness: 1.05
     - _TidalAmount: 0
     m_Colors:
     - _TidalDir: {r: 1, g: 0, b: 0, a: 0}

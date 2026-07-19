@@ -25,7 +25,7 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Brightness: 0.4
+    - _Brightness: 0.42
     - _Density: 1.2
     - _DustStrength: 0.5
     - _Filament: 1.5

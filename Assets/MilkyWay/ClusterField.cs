@@ -53,12 +53,15 @@ namespace MilkyWay
                 Vector3 p = dir * r;
                 if (kind == Kind.Open) p.y *= 0.8f; // mild flattening
 
-                // Colour: globular = old (yellow/orange/red), open = young (blue/white).
+                // Colour: globular = old (yellow/orange/red giants) with a few hot
+                // blue stragglers; open = young (blue/white). Saturated deliberately
+                // so the warm tone survives additive HDR bloom + tonemapping.
                 Color c = kind == Kind.Globular
                     ? Palette(rng, new[] {
-                        (new Color(1.6f, 1.3f, 0.9f), 0.5f),   // yellow-white
-                        (new Color(1.7f, 1.0f, 0.55f), 0.35f), // orange
-                        (new Color(1.7f, 0.7f, 0.5f), 0.15f) })// red giant
+                        (new Color(1.7f, 1.35f, 0.78f), 0.42f), // yellow
+                        (new Color(1.85f, 1.0f, 0.42f), 0.34f), // orange
+                        (new Color(1.9f, 0.62f, 0.32f), 0.16f), // red giant
+                        (new Color(1.05f, 1.35f, 2.0f), 0.08f) })// blue straggler
                     : Palette(rng, new[] {
                         (new Color(1.3f, 1.5f, 2.0f), 0.45f),  // blue
                         (new Color(1.7f, 1.75f, 1.9f), 0.4f),  // blue-white

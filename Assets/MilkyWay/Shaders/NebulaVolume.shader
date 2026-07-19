@@ -109,7 +109,9 @@ Shader "MilkyWay/NebulaVolume"
             }
 
             // ---- the medium --------------------------------------------------
-            void nebulaMedium(float3 p, out float3 emission, out float absorb)
+            // viewAxis: object-space direction from the cloud to the camera. Used
+            // by the planetary type to orient its torus face-on (a real hole).
+            void nebulaMedium(float3 p, float3 viewAxis, out float3 emission, out float absorb)
             {
                 emission = 0.0; absorb = 0.0;
                 float r = length(p) / _Radius;         // 0 at core .. 1 at edge
@@ -135,76 +137,93 @@ Shader "MilkyWay/NebulaVolume"
                     // hot core (like Orion's Trapezium) ionizes the gas into teal
                     // OIII, fading through pink Hα to deep-red SII in the shielded
                     // dusty clumps — which also extinct hardest, cutting dark lanes.
-                    float3 hot = float3(0.18, 0.12, 0.0) * _Radius;
-                    float ion = smoothstep(0.95, 0.0, length(p - hot) / _Radius);
-                    float dust = saturate(neb_fbm(qw * 1.6 - 3.0) * 1.7 - 0.55);
+                    float3 hot = float3(0.16, 0.10, 0.0) * _Radius;
+                    float ion = smoothstep(1.0, 0.0, length(p - hot) / (_Radius * 0.9));
+                    float dust = saturate(neb_fbm(qw * 1.6 - 3.0) * 1.8 - 0.6);
+                    // A dark dust lane biting across the cavity (Orion's "fish
+                    // mouth"): a great-circle band where the position aligns with a
+                    // plane, strongest toward the core.
+                    float lane = smoothstep(0.14, 0.0,
+                                    abs(dot(normalize(p + 1e-4), normalize(float3(-0.5, -0.18, 0.32)))))
+                                 * smoothstep(1.0, 0.15, r);
 
                     float3 oiii = _Color2.rgb;                         // teal-green core
                     float3 halpha = _Color1.rgb;                      // pink body
-                    float3 sii = _Color1.rgb * float3(0.72, 0.5, 0.5); // deep red (less brown)
-                    float3 c = lerp(halpha, oiii, saturate(ion * 1.6));
-                    c = lerp(c, sii, saturate(dust * 0.6));
+                    float3 sii = _Color1.rgb * float3(0.7, 0.42, 0.42); // deep red (less brown)
+                    float3 c = lerp(halpha, oiii, saturate(ion * 1.9));
+                    c = lerp(c, sii, saturate(dust * 0.7));
 
-                    emission = c * d * (0.5 + 1.4 * ion) * _Brightness;
-                    absorb = (d + dust * _Density * 0.7) * _DustStrength;
+                    emission = c * d * (0.4 + 1.7 * ion) * _Brightness;
+                    emission *= (1.0 - 0.88 * lane);                   // carve the dark lane
+                    absorb = (d + dust * _Density * 0.8 + lane * _Density * 1.6) * _DustStrength;
                 }
                 else if (_NebulaType < 1.5)
                 {
-                    // REFLECTION: cool dust scattering a central star's blue light,
-                    // brighter close in (1/r^2-ish), barely self-absorbing.
-                    float lit = 1.0 / (0.15 + r * r * 7.0);
-                    emission = _Color1.rgb * d * lit * _Brightness;
-                    absorb = d * _DustStrength * 0.3;
+                    // REFLECTION: cool dust in fine STRIATIONS scattering a cluster's
+                    // blue light. Sparse and wispy with dark sky between the strands
+                    // — the bright stars are the subject, the gas only a veil. The
+                    // combed noise (tight across, loose along) makes the striae.
+                    float streak = neb_ridged(float3(qw.x * 3.0, qw.y * 0.5, qw.z * 3.0) + 17.0);
+                    float wisp = d * (0.12 + 1.7 * streak);
+                    float lit = 1.0 / (0.25 + r * r * 5.0);
+                    emission = _Color1.rgb * wisp * lit * _Brightness;
+                    absorb = wisp * _DustStrength * 0.22;
                 }
                 else if (_NebulaType < 2.5)
                 {
-                    // PLANETARY: a thin shell reads as a limb-brightened RING in
-                    // projection — a ray grazing the shell tangentially picks up
-                    // far more of it than one through the middle. OIII teal on the
-                    // inner edge, Hα red on the outer. A faint white-dwarf spark
-                    // sits at the centre (a point, not a glow).
-                    float shell = exp(-pow((r - _ShellRadius) / _ShellThickness, 2.0));
-                    float dd = shell * (0.55 + 0.45 * d);
-                    float mixr = smoothstep(_ShellRadius - _ShellThickness,
-                                            _ShellRadius + _ShellThickness, r);
-                    emission = lerp(_Color2.rgb, _Color1.rgb, mixr) * dd * _Brightness;
-                    // Faint OIII haze filling the interior (M57's teal centre),
-                    // fading out past the ring; textured by the same gas.
-                    float interior = smoothstep(_ShellRadius + _ShellThickness, 0.0, r);
-                    emission += _Color2.rgb * interior * (0.12 + 0.35 * d) * _Brightness;
-                    emission += float3(1.0, 0.95, 0.9) * 0.5 * exp(-r * r * 900.0) * _Brightness; // white dwarf
-                    absorb = dd * _DustStrength * 0.4;
+                    // PLANETARY: a genuine hollow RING, modelled as a TORUS whose axis
+                    // points at the camera — so rays through the centre pass through
+                    // the empty hole (a real dark centre, not a spherical shell's
+                    // unavoidable double-crossing). Teal OIII on the inner rim, red
+                    // Hα/NII on the outer, clumped by the gas.
+                    float axial = dot(p, viewAxis);                    // along the axis
+                    float3 radialVec = p - viewAxis * axial;           // in the ring plane
+                    float radial = length(radialVec) / _Radius;        // 0..1
+                    float2 tv = float2(radial - _ShellRadius, axial / _Radius);
+                    float torus = exp(-pow(length(tv) / _ShellThickness, 2.0));
+                    torus *= (0.4 + 1.2 * fine);                       // clump the ring
+                    float mixr = smoothstep(_ShellRadius - _ShellThickness * 1.4,
+                                            _ShellRadius + _ShellThickness * 1.4, radial);
+                    float3 ringCol = lerp(_Color2.rgb, _Color1.rgb, mixr); // teal in -> red out
+                    emission = ringCol * torus * _Brightness;
+                    // Faint OIII veil spanning the hole (M57's dim interior), but
+                    // thin enough that the ring clearly dominates.
+                    float veil = smoothstep(_ShellRadius + _ShellThickness, 0.0, radial)
+                               * smoothstep(1.1, 0.2, abs(axial) / _Radius);
+                    emission += _Color2.rgb * veil * 0.05 * _Brightness;
+                    emission += float3(1.0, 0.95, 0.9) * 0.3 * exp(-r * r * 3000.0) * _Brightness; // white dwarf
+                    absorb = torus * _DustStrength * 0.3;
                 }
                 else if (_NebulaType < 3.5)
                 {
-                    // SUPERNOVA REMNANT: a tangled cage of thin filaments (the shock
-                    // front), red SII/Hα crossed with teal OIII, over a faint blue
-                    // synchrotron haze from the core (the Crab's pulsar wind). Sharp
-                    // ridged noise, not smooth cloud — it reads as shredded gas.
-                    // The Crab's real structure: an ORANGE hydrogen filament CAGE
-                    // on the outer shell, a BLUE synchrotron glow (the pulsar wind)
-                    // filling the interior.
-                    float web = neb_ridged(qw * 2.4 + 8.0);
-                    float cage = smoothstep(0.2, 0.62, r) * smoothstep(1.05, 0.82, r);
-                    // Sparse, high-contrast filaments: only the brightest ridges
-                    // survive, so dark gaps open up between them (the Crab's lace).
-                    float fil = pow(web, 3.6) * cage * (0.5 + 0.5 * d);
-                    float3 orange = _Color1.rgb;                        // hydrogen orange
-                    float3 teal = _Color2.rgb;                          // OIII flecks
-                    float3 filColor = lerp(orange, teal, saturate((web - 0.7) * 2.6));
-                    emission = filColor * fil * _Brightness * 5.0;
-                    // Blue synchrotron interior, textured, fading out before the cage.
-                    float synch = smoothstep(0.68, 0.0, r) * (0.35 + 0.5 * neb_fbm(qw * 1.3));
-                    emission += float3(0.4, 0.62, 1.05) * synch * 0.5 * _Brightness;
-                    absorb = fil * _DustStrength * 0.3;
+                    // SUPERNOVA REMNANT (Crab): a sparse ORANGE filament lace over a
+                    // DIM blue synchrotron haze (the pulsar wind). Mostly empty space
+                    // between the strands so it never fills into a solid ball. The
+                    // oval shape comes from the object's non-uniform scale.
+                    float bodyN = neb_fbm(qw * 1.3 + 2.0);
+                    // A clearly BLUE, dim interior — the pulsar-wind synchrotron —
+                    // so the gaps between filaments read blue, not white.
+                    float synch = smoothstep(1.05, 0.1, r) * (0.14 + 0.5 * bodyN);
+                    emission = float3(0.3, 0.5, 1.25) * synch * 0.42 * _Brightness;
+                    // SPARSE orange filament lace: only the very sharpest ridges
+                    // survive (high smoothstep floor), so wide dark/blue gaps open
+                    // between thin strands. Green SII flecks on the brightest ridges.
+                    float web = neb_ridged(qw * 3.0 + 8.0);
+                    float fil = smoothstep(0.62, 0.9, web) * smoothstep(1.08, 0.12, r) * (0.4 + 0.6 * bodyN);
+                    float3 filCol = lerp(_Color1.rgb, float3(0.6, 1.25, 0.5), saturate((web - 0.88) * 4.0));
+                    emission += filCol * fil * _Brightness * 2.0;
+                    absorb = (synch * 0.1 + fil) * _DustStrength * 0.25;
                 }
                 else
                 {
-                    // DARK NEBULA: opaque dust, next to no emission — it reads as a
-                    // silhouette by BLOCKING the stars and glow behind it (the
-                    // occlusion alpha). A clumpy, defined body, not a wisp; a faint
-                    // browned rim where background light grazes its edge.
-                    float body = pow(base, 1.1) * edge * _Density;
+                    // DARK NEBULA: a wall of opaque dust with an eroded, ragged TOP
+                    // edge — the Horsehead rises from a dark dust bank. Silhouetted
+                    // by what it BLOCKS (the occlusion alpha over the red glow
+                    // behind); a faint browned rim where that glow grazes it.
+                    float crest = 0.05 + 0.55 * neb_fbm(float3(p.x, 0.0, p.z) * _NoiseScale * 1.6 + 40.0);
+                    float hy = p.y / _Radius;                          // -1 base .. 1 top
+                    float bank = smoothstep(crest + 0.28, crest - 0.28, hy); // dense below crest
+                    float body = pow(base, 1.0) * edge * bank * _Density;
                     absorb = body * _DustStrength * 3.5;
                     emission = _Color1.rgb * body * 0.03 * _Brightness; // barely-lit rim
                 }
@@ -260,13 +279,16 @@ Shader "MilkyWay/NebulaVolume"
                 float3 col = 0.0;
                 const float3 EXTINCT = float3(0.55, 1.0, 1.7); // dust reddens
                 float3 trans = 1.0;
+                // Object-space direction from the cloud centre to the camera; the
+                // planetary torus orients its axis along this so it reads face-on.
+                float3 viewAxis = normalize(ro);
 
                 [loop]
                 for (int s = 0; s < steps; s++)
                 {
                     float3 p = ro + rd * t;
                     float3 emission; float absorb;
-                    nebulaMedium(p, emission, absorb);
+                    nebulaMedium(p, viewAxis, emission, absorb);
                     col += trans * emission * dt;
                     trans *= exp(-absorb * dt * EXTINCT);
                     if (max(trans.r, max(trans.g, trans.b)) < 0.02) break;
