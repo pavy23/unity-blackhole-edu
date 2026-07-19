@@ -37,7 +37,7 @@ namespace MilkyWay
                 foreach (var (label, text) in localized)
                     if (label != null) label.text = text();
             }
-            bool wantShown = !controls.Busy;
+            bool wantShown = !(controls.Busy || controls.Immersive);
             if (wantShown != shown)
             {
                 shown = wantShown;
@@ -57,6 +57,7 @@ namespace MilkyWay
                     items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
                         (() => Loc.T("행성 투어", "Planet tour", "惑星ツアー", "行星导览"), controls.ToggleTour),
                         (() => Loc.T("진짜 크기", "True scale", "本当の縮尺", "真实比例"), controls.ToggleScaleTruth),
+                        (() => Loc.T("몰입 보기", "Immersive", "没入", "沉浸"), () => controls.SetImmersive(!controls.Immersive)),
                         (() => Loc.T("소리", "Sound", "音", "声音"), controls.ToggleMute),
                     }},
             };

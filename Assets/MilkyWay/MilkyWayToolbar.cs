@@ -37,7 +37,7 @@ namespace MilkyWay
                 foreach (var (label, text) in localized)
                     if (label != null) label.text = text();
             }
-            bool wantShown = !controls.Busy;
+            bool wantShown = !(controls.Busy || controls.Immersive);
             if (wantShown != shown)
             {
                 shown = wantShown;
@@ -72,6 +72,7 @@ namespace MilkyWay
                     label = () => Loc.T("은하 중심", "The core", "銀河中心", "银河中心"),
                     items = new (System.Func<string>, UnityEngine.Events.UnityAction)[] {
                         (() => Loc.T("궁수자리 A*", "Sagittarius A*", "いて座A*", "人马座A*"), controls.PlaySgrA),
+                        (() => Loc.T("몰입 보기", "Immersive", "没入", "沉浸"), () => controls.SetImmersive(!controls.Immersive)),
                         (() => Loc.T("소리", "Sound", "音", "声音"), controls.ToggleMute),
                     }},
             };

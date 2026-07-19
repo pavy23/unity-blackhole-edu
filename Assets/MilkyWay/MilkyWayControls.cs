@@ -43,6 +43,7 @@ namespace MilkyWay
             (sgrA != null && sgrA.IsPlaying);
 
         float distance, yaw, pitch;
+        bool immersive;
         GameObject helpBar;
         Text help;
         bool showHelp = true;
@@ -69,6 +70,13 @@ namespace MilkyWay
 
         void Update()
         {
+            // Esc leaves immersive view (the toolbar that would toggle it is hidden).
+#if ENABLE_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && immersive) SetImmersive(false);
+#else
+            if (Input.GetKeyDown(KeyCode.Escape) && immersive) SetImmersive(false);
+#endif
             ReadTourNav();
             if (!AnyPlaying)
                 ReadMouse();
@@ -76,6 +84,13 @@ namespace MilkyWay
 
         // ---- toolbar entry points (click-only UI; guards centralized here) ---
         public bool Busy => AnyPlaying;
+        public bool Immersive => immersive;
+        public void SetImmersive(bool on)
+        {
+            immersive = on;
+            LanguageSelect.SetVisible(!on);
+            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
+        }
         public void PlayJourney() { if (journey != null && !AnyPlaying) journey.Begin(); }
         public void PlayNightSky() { if (nightSky != null && !AnyPlaying) nightSky.Begin(); }
         public void PlayAndromeda() { if (andromeda != null && !AnyPlaying) andromeda.Begin(); }

@@ -45,6 +45,7 @@ namespace MilkyWay
             (scaleTruth != null && scaleTruth.IsPlaying);
 
         float distance, yaw, pitch;
+        bool immersive;
         GameObject helpBar;
         Text help;
         bool showHelp = true;
@@ -61,6 +62,15 @@ namespace MilkyWay
 
         // ---- toolbar entry points (click-only UI) ----------------------------
         public bool Busy => AnyPlaying;
+        public bool Immersive => immersive;
+        public void SetImmersive(bool on)
+        {
+            immersive = on;
+            LanguageSelect.SetVisible(!on);
+            if (hoverRing != null && on) hoverRing.gameObject.SetActive(false);
+            if (tipPanel != null && on) tipPanel.gameObject.SetActive(false);
+            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
+        }
         public void ToggleTour() { if (tour == null) return; if (tour.Running) tour.StopTour(); else if (!AnyPlaying) tour.StartTour(); }
         public void ToggleScaleTruth() { if (scaleTruth == null) return; if (scaleTruth.IsPlaying) scaleTruth.Abort(); else if (!AnyPlaying) scaleTruth.Begin(); }
         public void ToggleMute() { if (audioScape != null) audioScape.muted = !audioScape.muted; }
@@ -68,6 +78,12 @@ namespace MilkyWay
 
         void Update()
         {
+#if ENABLE_INPUT_SYSTEM
+            var kb = UnityEngine.InputSystem.Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && immersive) SetImmersive(false);
+#else
+            if (Input.GetKeyDown(KeyCode.Escape) && immersive) SetImmersive(false);
+#endif
             ReadTourNav();
             if (!AnyPlaying)
                 ReadMouse();
@@ -75,7 +91,7 @@ namespace MilkyWay
             // only. While zoomed in, the mouse belongs to rotating the view
             // (SolarSystemTour's drag-orbit), so picking is off and the
             // affordance ring hides.
-            if (!AnyPlaying)
+            if (!AnyPlaying && !immersive)
             {
                 ReadPlanetClick();
             }

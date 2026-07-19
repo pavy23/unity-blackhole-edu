@@ -302,6 +302,8 @@ namespace BlackHoleEffect
             LanguageSelect.SetVisible(!on);
             // MR's hand menu shares the bottom strip with the captions.
             MRControls.SetVisible(!on);
+            // The only way back once the toolbar is hidden.
+            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
         }
 
         void Start()
@@ -458,9 +460,16 @@ namespace BlackHoleEffect
         /// <see cref="DesktopToolbar"/> so WebGL never fights the browser.</summary>
         void ReadHotkeys()
         {
-            if (tour == null || !tour.Running) return;
+            // Esc leaves immersive view — the only way back once the toolbar (and
+            // its toggle) is hidden.
 #if ENABLE_INPUT_SYSTEM
             var kb = Keyboard.current;
+            if (kb != null && kb.escapeKey.wasPressedThisFrame && immersive) { SetImmersive(false); return; }
+#else
+            if (Input.GetKeyDown(KeyCode.Escape) && immersive) { SetImmersive(false); return; }
+#endif
+            if (tour == null || !tour.Running) return;
+#if ENABLE_INPUT_SYSTEM
             if (kb == null) return;
             if (kb.rightArrowKey.wasPressedThisFrame) tour.Next();
             if (kb.leftArrowKey.wasPressedThisFrame) tour.Prev();
