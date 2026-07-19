@@ -25,8 +25,8 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _Brightness: 1.9
-    - _Density: 0.85
+    - _Brightness: 1.35
+    - _Density: 0.8
     - _DustStrength: 1
     - _Filament: 1.5
     - _NebulaType: 0
@@ -35,9 +35,9 @@ Material:
     - _ShellRadius: 0.6
     - _ShellThickness: 0.1
     - _Steps: 90
-    - _Threshold: 0.5
+    - _Threshold: 0.52
     m_Colors:
-    - _Color1: {r: 2.3, g: 0.45, b: 0.55, a: 1}
-    - _Color2: {r: 0.5, g: 1.2, b: 1, a: 1}
+    - _Color1: {r: 2.3, g: 0.4, b: 0.72, a: 1}
+    - _Color2: {r: 0.6, g: 0.9, b: 1.2, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

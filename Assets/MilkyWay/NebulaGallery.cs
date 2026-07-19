@@ -48,7 +48,7 @@ namespace MilkyWay
                     name = () => Loc.T("태양계", "Solar System", "太陽系", "太阳系"), image = "TitleCards/card_solar" },
                 new SceneNavigator.Dest { scene = "BlackHoleShowcase",
                     name = () => Loc.T("블랙홀", "Black Hole", "ブラックホール", "黑洞"), image = "TitleCards/card_blackhole" },
-            });
+            }, home: true, verticalLayout: true);
         }
 
         public void Next() { if (controller != null) Frame((index + 1) % controller.Count); }
@@ -57,6 +57,14 @@ namespace MilkyWay
         void Frame(int i, bool instant = false)
         {
             index = i;
+            // Only the framed specimen renders — each nebula is a full-screen
+            // raymarch, so showing all six at once is a heavy, needless load (and
+            // lets neighbours bleed into the shot). Activate one, hide the rest.
+            for (int k = 0; k < controller.Count; k++)
+            {
+                var rk = controller.Root(k);
+                if (rk != null) rk.gameObject.SetActive(k == i);
+            }
             var t = controller.Root(i);
             float radius = controller.Radius(i);
 

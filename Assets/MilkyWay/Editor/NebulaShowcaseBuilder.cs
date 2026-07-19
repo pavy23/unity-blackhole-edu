@@ -99,10 +99,12 @@ namespace MilkyWay.Editor
                 var bgMat = SaveMaterial(h.id + "_Backdrop", nebShader);
                 var backHero = h;
                 backHero.type = 0; // emission
-                backHero.color1 = new Color(2.3f, 0.45f, 0.55f);
-                backHero.color2 = new Color(0.5f, 1.2f, 1.0f);
-                backHero.brightness = 1.9f; backHero.radius = h.radius * 1.5f; backHero.density = 0.85f;
-                backHero.noiseScale = 0.2f; backHero.filament = 1.5f; backHero.threshold = 0.5f;
+                // A pink IC 434-style glow (distinct from Orion's orange) kept
+                // dimmer than before, so the dark dust — not the glow — dominates.
+                backHero.color1 = new Color(2.3f, 0.4f, 0.72f);
+                backHero.color2 = new Color(0.6f, 0.9f, 1.2f);
+                backHero.brightness = 1.35f; backHero.radius = h.radius * 1.5f; backHero.density = 0.8f;
+                backHero.noiseScale = 0.2f; backHero.filament = 1.5f; backHero.threshold = 0.52f;
                 backHero.dust = 1.0f; backHero.stretch = Vector3.zero;
                 NebulaLibrary.ApplyMaterial(bgMat, backHero);
                 var bg = MakeVolume(root.transform, "Backdrop", bgMat);

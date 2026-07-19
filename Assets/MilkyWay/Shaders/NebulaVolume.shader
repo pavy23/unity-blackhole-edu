@@ -179,11 +179,14 @@ Shader "MilkyWay/NebulaVolume"
                     float axial = dot(p, viewAxis);                    // along the axis
                     float3 radialVec = p - viewAxis * axial;           // in the ring plane
                     float radial = length(radialVec) / _Radius;        // 0..1
-                    float2 tv = float2(radial - _ShellRadius, axial / _Radius);
+                    // Wobble the ring radius with position noise so it is not a
+                    // perfect circle — M57 is lumpy and slightly oval.
+                    float ringR = _ShellRadius * (1.0 + 0.2 * (neb_fbm(radialVec * 1.7 + 13.0) - 0.5) * 2.0);
+                    float2 tv = float2(radial - ringR, axial / _Radius);
                     float torus = exp(-pow(length(tv) / _ShellThickness, 2.0));
-                    torus *= (0.4 + 1.2 * fine);                       // clump the ring
-                    float mixr = smoothstep(_ShellRadius - _ShellThickness * 1.4,
-                                            _ShellRadius + _ShellThickness * 1.4, radial);
+                    torus *= (0.3 + 1.35 * fine);                      // clump / break the ring
+                    float mixr = smoothstep(ringR - _ShellThickness * 1.4,
+                                            ringR + _ShellThickness * 1.4, radial);
                     float3 ringCol = lerp(_Color2.rgb, _Color1.rgb, mixr); // teal in -> red out
                     emission = ringCol * torus * _Brightness;
                     // Faint OIII veil spanning the hole (M57's dim interior), but
