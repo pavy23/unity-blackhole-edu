@@ -103,6 +103,8 @@ namespace BlackHoleEffect
                     name = () => Loc.T("우리은하", "Milky Way", "天の川銀河", "银河系"), image = "TitleCards/card_galaxy" },
                 new SceneNavigator.Dest { scene = "SolarSystemShowcase",
                     name = () => Loc.T("태양계", "Solar System", "太陽系", "太阳系"), image = "TitleCards/card_solar" },
+                new SceneNavigator.Dest { scene = "NebulaShowcase",
+                    name = () => Loc.T("성운과 성단", "Nebulae & Clusters", "星雲と星団", "星云与星团"), image = "TitleCards/card_nebula" },
             });
         }
     }

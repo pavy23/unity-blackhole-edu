@@ -84,6 +84,8 @@ namespace MilkyWay
             nav.Init(new[] {
                 new SceneNavigator.Dest { scene = "SolarSystemShowcase",
                     name = () => Loc.T("태양계", "Solar System", "太陽系", "太阳系"), image = "TitleCards/card_solar" },
+                new SceneNavigator.Dest { scene = "NebulaShowcase",
+                    name = () => Loc.T("성운과 성단", "Nebulae & Clusters", "星雲と星団", "星云与星团"), image = "TitleCards/card_nebula" },
                 new SceneNavigator.Dest { scene = "BlackHoleShowcase",
                     name = () => Loc.T("블랙홀", "Black Hole", "ブラックホール", "黑洞"), image = "TitleCards/card_blackhole" },
             });

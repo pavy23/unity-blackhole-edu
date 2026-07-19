@@ -12,6 +12,14 @@ namespace MilkyWay
     /// </summary>
     public class NebulaStars : MonoBehaviour
     {
+        // Serialized config: the showcase builder fills these and flips
+        // configureOnStart so the stars build themselves at runtime. (The
+        // prototype instead calls Configure() directly each preset change.)
+        public bool configureOnStart;
+        public Color cfgBright = Color.white, cfgField = Color.white;
+        public int cfgBrightN, cfgFieldN;
+        public float cfgRadius = 8f, cfgCoreRadius = 1f;
+
         Texture2D spikeTex, dotTex;
         Material spikeMat, dotMat;
         readonly List<Transform> stars = new();
@@ -24,6 +32,12 @@ namespace MilkyWay
             dotTex = BuildDot(64);
             spikeMat = new Material(Shader.Find("Sprites/Default")) { mainTexture = spikeTex, renderQueue = 3200 };
             dotMat = new Material(Shader.Find("Sprites/Default")) { mainTexture = dotTex, renderQueue = 3200 };
+        }
+
+        void Start()
+        {
+            if (configureOnStart)
+                Configure(cfgBright, cfgField, cfgBrightN, cfgFieldN, cfgRadius, cfgCoreRadius);
         }
 
         /// <summary>Place a fresh set of stars. brightCount brilliant spiked

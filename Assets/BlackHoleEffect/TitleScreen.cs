@@ -13,7 +13,7 @@ namespace BlackHoleEffect
     public class TitleScreen : MonoBehaviour
     {
         Text title, subtitle, hint;
-        readonly (Text label, System.Func<string> text)[] cardTexts = new (Text, System.Func<string>)[6];
+        readonly (Text label, System.Func<string> text)[] cardTexts = new (Text, System.Func<string>)[8];
         Button[] langButtons;
         int locVersion = -1;
 
@@ -37,6 +37,12 @@ namespace BlackHoleEffect
                                     "A journey through the spiral\nof hundreds of billions of stars",
                                     "数千億の星がつくる\n渦巻きを旅する",
                                     "穿越数千亿颗恒星\n组成的旋涡") },
+            new Card { scene = "NebulaShowcase", image = "TitleCards/card_nebula",
+                title = () => Loc.T("성운과 성단", "Nebulae & Clusters", "星雲と星団", "星云与星团"),
+                blurb = () => Loc.T("별이 태어나고 죽는 곳 —\n성운과 성단의 우주",
+                                    "Where stars are born and die —\nnebulae and star clusters",
+                                    "星が生まれ、死ぬ場所 —\n星雲と星団の宇宙",
+                                    "恒星诞生与消亡之地 —\n星云与星团") },
             new Card { scene = "BlackHoleShowcase", image = "TitleCards/card_blackhole",
                 title = () => Loc.T("블랙홀", "Black Hole", "ブラックホール", "黑洞"),
                 blurb = () => Loc.T("빛마저 갇히는 곳 —\n중력이 만드는 극한의 세계",
@@ -85,9 +91,10 @@ namespace BlackHoleEffect
                 TextAnchor.MiddleCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
                 new Vector2(0f, -226f), new Vector2(1400f, 36f));
 
-            // Three experience cards, home outward: solar system → galaxy → hole.
-            const float cardW = 430f, cardH = 330f, gap = 45f;
-            float x0 = -(cardW + gap);
+            // Four experience cards: solar system → galaxy → nebulae → hole.
+            // Widths chosen so the whole row centres inside a 1920-ref canvas.
+            const float cardW = 344f, cardH = 330f, gap = 38f;
+            float x0 = -((Cards.Length - 1) * (cardW + gap)) * 0.5f;
             for (int i = 0; i < Cards.Length; i++)
             {
                 int idx = i;
@@ -159,9 +166,9 @@ namespace BlackHoleEffect
 
                 // Title hugs the top, blurb hugs the bottom — the scene photo
                 // shows through the clear middle instead of being covered.
-                var cardTitle = BlackHoleUI.MakeText(card, "Title", 40, BlackHoleUI.TitleGold,
+                var cardTitle = BlackHoleUI.MakeText(card, "Title", 34, BlackHoleUI.TitleGold,
                     TextAnchor.UpperCenter, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f),
-                    new Vector2(0f, -44f), new Vector2(cardW - 40f, 52f), FontStyle.Bold);
+                    new Vector2(0f, -44f), new Vector2(cardW - 30f, 46f), FontStyle.Bold);
                 cardTexts[i * 2] = (cardTitle, Cards[i].title);
 
                 var blurb = BlackHoleUI.MakeText(card, "Blurb", 20, BlackHoleUI.TextPrimary,

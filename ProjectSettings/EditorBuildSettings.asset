@@ -26,6 +26,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/MilkyWay/Scenes/SolarSystemMR.unity
     guid: 1b576c15dc8ca724da9f4c51e6fded28
+  - enabled: 1
+    path: Assets/MilkyWay/Scenes/NebulaShowcase.unity
+    guid: 8c832266482e90844a5e704289e54a42
   m_configObjects:
     Unity.XR.Oculus.Settings: {fileID: 11400000, guid: bfa1182bd221b4ca89619141f66f1260, type: 2}
     Unity.XR.WindowsMR.Settings: {fileID: 11400000, guid: dc5a169419fa04987b057f65238cf3ba, type: 2}
