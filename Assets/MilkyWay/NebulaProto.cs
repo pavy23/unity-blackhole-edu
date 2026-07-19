@@ -10,6 +10,7 @@ namespace MilkyWay
     public class NebulaProto : MonoBehaviour
     {
         public Material nebulaMaterial;
+        public NebulaStars stars;
         public float autoSeconds = 6f;
 
         [System.Serializable]
@@ -76,6 +77,23 @@ namespace MilkyWay
             nebulaMaterial.SetFloat("_DustStrength", p.dust);
             nebulaMaterial.SetFloat("_ShellRadius", p.shellRadius);
             nebulaMaterial.SetFloat("_ShellThickness", p.shellThickness);
+
+            if (stars != null) ConfigureStars(i, p);
+        }
+
+        void ConfigureStars(int i, Preset p)
+        {
+            // Real nebula photos are dominated by embedded stars; give each type
+            // the cluster it actually shows.
+            if (i == 0) // Orion emission: the tight teal-white Trapezium + field
+                stars.Configure(new Color(0.75f, 1.15f, 1.35f), new Color(1.2f, 1.05f, 0.95f),
+                                5, 70, p.radius, p.radius * 0.16f);
+            else if (i == 1) // Pleiades reflection: bright blue giants spread wide
+                stars.Configure(new Color(0.8f, 0.95f, 1.5f), new Color(0.85f, 0.95f, 1.3f),
+                                8, 45, p.radius, p.radius * 0.55f);
+            else // planetary: the white dwarf is in the shader; a few faint field stars
+                stars.Configure(new Color(0.9f, 0.95f, 1.1f), new Color(0.9f, 0.9f, 1.0f),
+                                0, 22, p.radius * 1.6f, p.radius);
         }
 
         public string CurrentName => index >= 0 ? Presets[index].name : "";

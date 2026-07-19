@@ -48,6 +48,10 @@ namespace MilkyWay.Editor
             nr.shadowCastingMode = ShadowCastingMode.Off;
             nebGO.transform.position = new Vector3(-9f, 0f, 0f);
 
+            // Embedded bright stars — the thing that makes it read as an
+            // astrophoto instead of a CGI cloud.
+            var stars = nebGO.AddComponent<NebulaStars>();
+
             // --- globular cluster ----------------------------------------------
             var starMat = SaveMaterial("ClusterStarsProto", starShader);
             starMat.SetFloat("_StarBrightness", 1.4f);
@@ -83,6 +87,21 @@ namespace MilkyWay.Editor
 
             var proto = camGO.AddComponent<NebulaProto>();
             proto.nebulaMaterial = nebMat;
+            proto.stars = stars;
+
+            // Bloom: bright stars and gas need to glow like a long exposure.
+            var post = new GameObject("Post Processing").AddComponent<Volume>();
+            post.isGlobal = true;
+            var profile = ScriptableObject.CreateInstance<VolumeProfile>();
+            var bloom = profile.Add<Bloom>();
+            bloom.active = true;
+            bloom.threshold.Override(0.9f);
+            bloom.intensity.Override(1.1f);
+            bloom.scatter.Override(0.72f);
+            bloom.highQualityFiltering.Override(true);
+            var tm = profile.Add<Tonemapping>();
+            tm.active = true; tm.mode.Override(TonemappingMode.ACES);
+            post.profile = profile;
 
             EnsureFolder(Root, "Scenes");
             EditorSceneManager.SaveScene(scene, Root + "/Scenes/NebulaProto.unity");
