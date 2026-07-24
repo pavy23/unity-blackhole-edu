@@ -473,17 +473,30 @@ namespace MilkyWay
 
         // ---------------- shared UI ------------------------------------------
 
+        Button darkButton;
+
         void ShowStop(bool on)
         {
             if (stopButton == null)
             {
                 if (!on) return;
                 stopButton = BlackHoleUI.MakeCinematicButton(GetComponent<Camera>(), "Rot Stop", Abort);
+                // The lab's one experiment is comparing the two universes —
+                // the narration invites "press D", which a phone doesn't have.
+                darkButton = BlackHoleUI.MakeButton(
+                    BlackHoleUI.EnsureCanvas(GetComponent<Camera>()).transform, "Rot DarkMatter", "",
+                    new Vector2(1f, 1f), new Vector2(1f, 1f),
+                    new Vector2(-26f, -76f), new Vector2(170f, 44f), ToggleDarkMatter);
             }
             stopButton.gameObject.SetActive(on);
+            if (darkButton != null) darkButton.gameObject.SetActive(on);
             if (on)
+            {
                 stopButton.GetComponentInChildren<Text>().text =
                     Loc.T("종료 ■", "End ■", "終了 ■", "结束 ■");
+                darkButton.GetComponentInChildren<Text>().text =
+                    Loc.T("암흑물질 (D)", "Dark matter (D)", "暗黒物質 (D)", "暗物质 (D)");
+            }
         }
 
         void Caption(string text)

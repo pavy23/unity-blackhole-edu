@@ -38,6 +38,26 @@ namespace MilkyWay
                       $"{s.totalErrors} errors, {s.totalWarnings} warnings, {s.totalTime.TotalMinutes:F1} min");
         }
 
+        /// <summary>The Quest passthrough APK: all scenes (TitleScreen boots,
+        /// detects the HMD and hands off to MRTitle). IL2CPP/ARM64 and the
+        /// OpenXR feature set come from the project settings.</summary>
+        [MenuItem("Tools/Cosmos/Build Android (Quest APK)")]
+        public static void BuildAndroid()
+        {
+            var options = new BuildPlayerOptions
+            {
+                scenes = System.Array.ConvertAll(
+                    System.Array.FindAll(EditorBuildSettings.scenes, sc => sc.enabled), sc => sc.path),
+                target = BuildTarget.Android,
+                locationPathName = "Builds/Android/CosmosEdu.apk",
+                options = BuildOptions.None,
+            };
+            var report = BuildPipeline.BuildPlayer(options);
+            var s = report.summary;
+            Debug.Log($"[AndroidBuild] {s.result} — {s.totalSize / (1024f * 1024f):F1} MB, " +
+                      $"{s.totalErrors} errors, {s.totalWarnings} warnings, {s.totalTime.TotalMinutes:F1} min");
+        }
+
         /// <summary>The full exhibit (all scenes, MR included — inert without
         /// a headset) for the Windows player. Same slimmed content as the web
         /// build: narration at Vorbis 35%, no splash, no Sentis.</summary>
@@ -46,7 +66,8 @@ namespace MilkyWay
         {
             var options = new BuildPlayerOptions
             {
-                scenes = System.Array.ConvertAll(EditorBuildSettings.scenes, sc => sc.path),
+                scenes = System.Array.ConvertAll(
+                    System.Array.FindAll(EditorBuildSettings.scenes, sc => sc.enabled), sc => sc.path),
                 target = BuildTarget.StandaloneWindows64,
                 locationPathName = "Builds/Windows/CosmosEdu.exe",
                 options = BuildOptions.None,

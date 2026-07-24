@@ -143,21 +143,27 @@ namespace MilkyWay
         {
             Vector2 pointer;
             bool clicked;
+            bool hasPointer;
 #if ENABLE_INPUT_SYSTEM
             var mouse = Mouse.current;
-            if (mouse == null) return;
-            pointer = mouse.position.ReadValue();
-            clicked = mouse.leftButton.wasPressedThisFrame;
+            hasPointer = mouse != null;
+            pointer = hasPointer ? mouse.position.ReadValue() : Vector2.zero;
+            clicked = hasPointer && mouse.leftButton.wasPressedThisFrame;
 #else
+            hasPointer = true;
             pointer = Input.mousePosition;
             clicked = Input.GetMouseButtonDown(0);
 #endif
-            // Mobile browsers: a short still tap picks a planet.
+            // Mobile browsers: a short still tap picks a planet (it must work
+            // even when no Mouse device exists at all). While a touch orbit is
+            // in flight, or with neither mouse nor tap, skip the hover pick —
+            // otherwise a mouseless device hover-tests a stale corner pixel.
             if (TouchOrbit.Tapped)
             {
                 pointer = TouchOrbit.TapPosition;
                 clicked = true;
             }
+            else if (TouchOrbit.Dragging || !hasPointer) return;
             hoverIndex = PickBody(pointer, out Vector3 bodyPos, out float bodyRadius);
             UpdateHoverAffordance(pointer, bodyPos, bodyRadius);
 
