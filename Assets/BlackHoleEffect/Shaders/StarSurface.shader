@@ -35,6 +35,7 @@ Shader "BlackHole/StarSurface"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma target 3.5
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "StarFunctions.hlsl"
 
@@ -115,18 +116,18 @@ Shader "BlackHole/StarSurface"
                 // procedural granulation/spots but keeps limb darkening, the
                 // chromosphere rim and the flicker. The map drifts slowly in
                 // longitude — a stand-in for the ~25-day solar rotation.
-                if (_SurfaceTexStrength > 0.001)
-                {
-                    float3 os = normalize(i.normalOS);
-                    float vTex = asin(clamp(os.y, -1.0, 1.0)) / 3.14159265 + 0.5;
-                    float lon = atan2(os.z, os.x) / 6.2831853 + _Time.y * 0.002;
-                    float uA = frac(lon);
-                    float uB = frac(lon + 0.5) - 0.5;
-                    float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, vTex) : float2(uB, vTex);
-                    float3 photo = SAMPLE_TEXTURE2D(_SurfaceTex, sampler_SurfaceTex, uv).rgb;
-                    float3 mapped = (photo * _StarColor.rgb * limb + rimTint * rim) * flicker;
-                    col = lerp(col, mapped, _SurfaceTexStrength);
-                }
+                // Branchless on purpose: an implicit-derivative texture sample
+                // inside non-uniform control flow is a hard compile error on
+                // WebGPU/WGSL (the whole shader went magenta on the web build).
+                float3 os = normalize(i.normalOS);
+                float vTex = asin(clamp(os.y, -1.0, 1.0)) / 3.14159265 + 0.5;
+                float lon = atan2(os.z, os.x) / 6.2831853 + _Time.y * 0.002;
+                float uA = frac(lon);
+                float uB = frac(lon + 0.5) - 0.5;
+                float2 uv = fwidth(uA) <= fwidth(uB) ? float2(uA, vTex) : float2(uB, vTex);
+                float3 photo = SAMPLE_TEXTURE2D(_SurfaceTex, sampler_SurfaceTex, uv).rgb;
+                float3 mapped = (photo * _StarColor.rgb * limb + rimTint * rim) * flicker;
+                col = lerp(col, mapped, saturate(_SurfaceTexStrength));
                 return half4(col, 1.0);
             }
             ENDHLSL
@@ -149,6 +150,7 @@ Shader "BlackHole/StarSurface"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+            #pragma target 3.5
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "StarFunctions.hlsl"
 

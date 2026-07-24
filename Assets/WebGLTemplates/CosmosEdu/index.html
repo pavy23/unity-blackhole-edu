@@ -95,6 +95,11 @@
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
         showBanner: unityShowBanner,
+        // The raymarched exhibits (black hole, galaxy, nebulae) are fragment
+        // bound: rendering at a phone's native DPR 3 means 9× the pixels of
+        // DPR 1 for barely visible extra detail. Cap it — phones render at 1,
+        // desktops at most 1.5.
+        devicePixelRatio: Math.min(window.devicePixelRatio || 1, isMobile ? 1.0 : 1.5),
       };
 
       if (isMobile) {

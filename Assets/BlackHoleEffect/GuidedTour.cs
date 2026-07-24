@@ -246,6 +246,8 @@ namespace BlackHoleEffect
 
             cardFooter = BlackHoleUI.MakeText(card, "Footer", 15, BlackHoleUI.TextSecondary, TextAnchor.LowerLeft,
                 new Vector2(0f, 0f), new Vector2(0f, 0f), new Vector2(28f, 12f), new Vector2(860f, 22f));
+
+            BlackHoleUI.MakeTourNav(card, Prev, Next, StopTour);
         }
     }
 }

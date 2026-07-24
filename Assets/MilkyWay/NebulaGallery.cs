@@ -60,6 +60,16 @@ namespace MilkyWay
             BuildStartButton();
             Loc.Changed -= Refresh; Loc.Changed += Refresh;
             Frame(0, instant: true);
+
+#if UNITY_WEBGL && !UNITY_EDITOR
+            // Browser GPUs (especially phones) cannot afford the desktop march
+            // budget: cap every volume's steps. Runtime-only — the shared
+            // material assets are untouched outside the player.
+            foreach (var r in FindObjectsByType<Renderer>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                foreach (var m in r.sharedMaterials)
+                    if (m != null && m.HasProperty("_Steps"))
+                        m.SetFloat("_Steps", Mathf.Min(m.GetFloat("_Steps"), 40f));
+#endif
         }
 
         Text startBtnLabel;

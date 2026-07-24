@@ -310,6 +310,21 @@ namespace BlackHoleEffect
             return btn;
         }
 
+        /// <summary>◀ / ▶ / ✕ on a tour card's lower-right corner — the touch
+        /// and mouse equivalent of the arrow keys, so web and mobile visitors
+        /// can step a narrated tour without a keyboard. Same placement on every
+        /// exhibit's card (the nebula tour set the pattern).</summary>
+        public static void MakeTourNav(RectTransform card,
+            UnityEngine.Events.UnityAction prev,
+            UnityEngine.Events.UnityAction next,
+            UnityEngine.Events.UnityAction end)
+        {
+            var br = new Vector2(1f, 0f);
+            MakeButton(card, "TourPrev", "◀", br, br, new Vector2(-250f, 12f), new Vector2(60f, 34f), prev);
+            MakeButton(card, "TourNext", "▶", br, br, new Vector2(-180f, 12f), new Vector2(60f, 34f), next);
+            MakeButton(card, "TourEnd", "✕", br, br, new Vector2(-110f, 12f), new Vector2(60f, 34f), end);
+        }
+
         /// <summary>
         /// The stop/skip control every cinematic puts on screen — the way out of
         /// a narrated experience that has taken over the view.

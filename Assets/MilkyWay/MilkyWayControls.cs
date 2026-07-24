@@ -89,7 +89,7 @@ namespace MilkyWay
         {
             immersive = on;
             LanguageSelect.SetVisible(!on);
-            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
+            if (on) ImmersiveHint.Show(() => SetImmersive(false)); else ImmersiveHint.Hide();
         }
         public void PlayJourney() { if (journey != null && !AnyPlaying) journey.Begin(); }
         public void PlayNightSky() { if (nightSky != null && !AnyPlaying) nightSky.Begin(); }

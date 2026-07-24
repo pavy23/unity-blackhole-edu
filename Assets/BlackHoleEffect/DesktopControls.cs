@@ -303,7 +303,7 @@ namespace BlackHoleEffect
             // MR's hand menu shares the bottom strip with the captions.
             MRControls.SetVisible(!on);
             // The only way back once the toolbar is hidden.
-            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
+            if (on) ImmersiveHint.Show(() => SetImmersive(false)); else ImmersiveHint.Hide();
         }
 
         void Start()

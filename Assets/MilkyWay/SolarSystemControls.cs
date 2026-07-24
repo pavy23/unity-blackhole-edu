@@ -69,7 +69,7 @@ namespace MilkyWay
             LanguageSelect.SetVisible(!on);
             if (hoverRing != null && on) hoverRing.gameObject.SetActive(false);
             if (tipPanel != null && on) tipPanel.gameObject.SetActive(false);
-            if (on) ImmersiveHint.Show(); else ImmersiveHint.Hide();
+            if (on) ImmersiveHint.Show(() => SetImmersive(false)); else ImmersiveHint.Hide();
         }
         public void ToggleTour() { if (tour == null) return; if (tour.Running) tour.StopTour(); else if (!AnyPlaying) tour.StartTour(); }
         public void ToggleScaleTruth() { if (scaleTruth == null) return; if (scaleTruth.IsPlaying) scaleTruth.Abort(); else if (!AnyPlaying) scaleTruth.Begin(); }
