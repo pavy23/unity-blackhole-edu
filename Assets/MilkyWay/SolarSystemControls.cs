@@ -152,6 +152,12 @@ namespace MilkyWay
             pointer = Input.mousePosition;
             clicked = Input.GetMouseButtonDown(0);
 #endif
+            // Mobile browsers: a short still tap picks a planet.
+            if (TouchOrbit.Tapped)
+            {
+                pointer = TouchOrbit.TapPosition;
+                clicked = true;
+            }
             hoverIndex = PickBody(pointer, out Vector3 bodyPos, out float bodyRadius);
             UpdateHoverAffordance(pointer, bodyPos, bodyRadius);
 
@@ -274,6 +280,13 @@ namespace MilkyWay
             dy = Input.GetAxis("Mouse Y") * 12f;
             scroll = Input.mouseScrollDelta.y;
 #endif
+            // Mobile browsers: one-finger drag orbits, two-finger pinch zooms.
+            if (TouchOrbit.Dragging)
+            {
+                dragging = true;
+                dx += TouchOrbit.DragDelta.x; dy += TouchOrbit.DragDelta.y;
+            }
+            scroll += TouchOrbit.PinchNotches;
             bool zooming = !Mathf.Approximately(scroll, 0f);
             if (!dragging && !zooming) return;
 

@@ -152,6 +152,13 @@ namespace MilkyWay
             dy = Input.GetAxis("Mouse Y") * 12f;
             scroll = Input.mouseScrollDelta.y;
 #endif
+            // Mobile browsers: one-finger drag orbits, two-finger pinch zooms.
+            if (TouchOrbit.Dragging)
+            {
+                dragging = true;
+                dx += TouchOrbit.DragDelta.x; dy += TouchOrbit.DragDelta.y;
+            }
+            scroll += TouchOrbit.PinchNotches;
             bool zooming = !Mathf.Approximately(scroll, 0f);
             if (!dragging && !zooming) return;
 
